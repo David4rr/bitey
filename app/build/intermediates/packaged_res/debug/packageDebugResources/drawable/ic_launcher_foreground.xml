@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Cute Bitey Orange Biscuit / Plate -->
+    <path
+        android:fillColor="#FF5E36"
+        android:pathData="M54,24 C37.4,24 24,37.4 24,54 C24,70.6 37.4,84 54,84 C70.6,84 84,70.6 84,54 C84,37.4 70.6,24 54,24 Z" />
+    <!-- White inner rim -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30 C40.7,30 30,40.7 30,54 C30,67.3 40.7,78 54,78 C67.3,78 78,67.3 78,54 C78,40.7 67.3,30 54,30 Z" />
+    <!-- Cute smile eyes -->
+    <path
+        android:fillColor="#1A202C"
+        android:pathData="M44,50 C44,52.2 42.2,54 40,54 C37.8,54 36,52.2 36,50 C36,47.8 37.8,46 40,46 C42.2,46 44,47.8 44,50 Z" />
+    <path
+        android:fillColor="#1A202C"
+        android:pathData="M72,50 C72,52.2 70.2,54 68,54 C65.8,54 64,52.2 64,50 C64,47.8 65.8,46 68,46 C70.2,46 72,47.8 72,50 Z" />
+    <!-- Cute smile mouth -->
+    <path
+        android:fillColor="#1A202C"
+        android:pathData="M48,58 C48,61.3 50.7,64 54,64 C57.3,64 60,61.3 60,58 Z" />
+</vector>
