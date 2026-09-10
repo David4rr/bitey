@@ -104,6 +104,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
     // Play Services Location
     implementation("com.google.android.gms:play-services-location:21.3.0")
+    // OpenStreetMap (OSMDroid) for Offline-first $0 Map
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

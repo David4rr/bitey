@@ -7,5 +7,6 @@ import dagger.hilt.android.HiltAndroidApp
 class BiteyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        org.osmdroid.config.Configuration.getInstance().userAgentValue = packageName
     }
 }
