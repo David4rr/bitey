@@ -20,12 +20,14 @@ sealed class Screen(
     data object Scrapbook : Screen("scrapbook", "Scrapbook", Icons.Rounded.Collections)
 
     companion object {
-        val bottomNavItems = listOf(
-            Journal,
-            Footprints,
-            NewEntry,
-            FateTable,
-            Scrapbook
-        )
+        val bottomNavItems: List<Screen> by lazy {
+            listOf(
+                Journal,
+                Footprints,
+                NewEntry,
+                FateTable,
+                Scrapbook
+            )
+        }
     }
 }
