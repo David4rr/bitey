@@ -1,0 +1,28 @@
+package com.bitey.app.feature.entry
+
+import com.bitey.app.core.database.model.MealType
+import com.bitey.app.core.database.model.TagEntity
+
+data class EntryEditorUiState(
+    val imagePath: String = "",
+    val stickerPath: String? = null,
+    val isStickerMode: Boolean = true,
+    val dishTitle: String = "",
+    val notes: String = "",
+    val mealType: MealType = MealType.LUNCH,
+    val rating: Float = 5.0f,
+    val priceString: String = "",
+    val currency: String = "IDR",
+    val isFavorite: Boolean = false,
+    val timestamp: Long = System.currentTimeMillis(),
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val locationName: String = "",
+    val isLocating: Boolean = false,
+    val selectedTags: Set<TagEntity> = emptySet(),
+    val availableTags: List<TagEntity> = emptyList(),
+    val isSaving: Boolean = false,
+    val isSavedSuccessfully: Boolean = false,
+    val errorMessage: String? = null,
+    val isNewTagDialogOpen: Boolean = false
+)

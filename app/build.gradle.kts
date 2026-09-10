@@ -102,6 +102,8 @@ dependencies {
     // Google ML Kit Subject Segmentation & Play Services Coroutines
     implementation("com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
+    // Play Services Location
+    implementation("com.google.android.gms:play-services-location:21.3.0")
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

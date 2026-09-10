@@ -93,6 +93,7 @@ import java.util.Locale
 @Composable
 fun NewEntryScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToEditor: (imagePath: String, stickerPath: String?, timestamp: Long, lat: Double?, lng: Double?) -> Unit,
     viewModel: NewEntryViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -242,11 +243,15 @@ fun NewEntryScreen(
                             style = uiState.stickerStyle,
                             onChangeStyle = { viewModel.openFallbackDialog() },
                             onContinue = {
-                                Toast.makeText(
-                                    context,
-                                    "Sticker saved! Ready for Phase 4 Journal Entry flow.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                val image = uiState.selectedImage!!
+                                val sticker = uiState.sticker!!
+                                onNavigateToEditor(
+                                    image.file.absolutePath,
+                                    sticker.file.absolutePath,
+                                    image.exifMetadata.capturedAtMillis ?: System.currentTimeMillis(),
+                                    image.exifMetadata.latitude,
+                                    image.exifMetadata.longitude
+                                )
                             }
                         )
                     }
@@ -255,6 +260,16 @@ fun NewEntryScreen(
                             processedImage = uiState.selectedImage!!,
                             onGenerateSticker = { viewModel.generateSticker(StickerStyle.AI_SEGMENTED) },
                             onOpenStyleOptions = { viewModel.openFallbackDialog() },
+                            onContinueWithoutSticker = {
+                                val image = uiState.selectedImage!!
+                                onNavigateToEditor(
+                                    image.file.absolutePath,
+                                    null,
+                                    image.exifMetadata.capturedAtMillis ?: System.currentTimeMillis(),
+                                    image.exifMetadata.latitude,
+                                    image.exifMetadata.longitude
+                                )
+                            },
                             onRetake = { viewModel.clearSelectedImage() }
                         )
                     }
@@ -405,6 +420,7 @@ private fun ImagePreviewCard(
     processedImage: ProcessedImage,
     onGenerateSticker: () -> Unit,
     onOpenStyleOptions: () -> Unit,
+    onContinueWithoutSticker: () -> Unit,
     onRetake: () -> Unit
 ) {
     Column(
@@ -576,6 +592,18 @@ private fun ImagePreviewCard(
                     color = InkPrimary
                 )
             }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+
+        TextButton(
+            onClick = onContinueWithoutSticker,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Skip sticker & continue with original photo",
+                style = MaterialTheme.typography.bodySmall,
+                color = InkSecondary
+            )
         }
     }
 }
