@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,10 +34,15 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Style
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,9 +50,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +72,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.bitey.app.core.image.CompositedSticker
 import com.bitey.app.core.image.ProcessedImage
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
 import com.bitey.app.core.ui.neumorphic.neumorphicCard
@@ -160,13 +175,23 @@ fun NewEntryScreen(
                 Spacer(modifier = Modifier.width(16.dp))
 
                 Column {
+                    val title = when {
+                        uiState.sticker != null -> "Die-Cut Sticker Ready"
+                        uiState.selectedImage != null -> "Review Your Bite"
+                        else -> "Paste Today's Bite"
+                    }
+                    val subtitle = when {
+                        uiState.sticker != null -> "Tactile on-device sticker composited"
+                        uiState.selectedImage != null -> "Optimized & ready for AI segmentation"
+                        else -> "Select photo or capture live"
+                    }
                     Text(
-                        text = if (uiState.selectedImage != null) "Review Your Bite" else "Paste Today's Bite",
+                        text = title,
                         style = MaterialTheme.typography.titleLarge,
                         color = InkPrimary
                     )
                     Text(
-                        text = if (uiState.selectedImage != null) "Optimized & ready for AI segmentation" else "Select photo or capture live",
+                        text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
                         color = InkSecondary
                     )
@@ -195,25 +220,42 @@ fun NewEntryScreen(
 
             // Main Content Area with Animated Transitions
             AnimatedContent(
-                targetState = Pair(uiState.isLoading, uiState.selectedImage != null),
+                targetState = Triple(
+                    uiState.isLoading || uiState.isSegmenting,
+                    uiState.selectedImage != null,
+                    uiState.sticker != null
+                ),
                 transitionSpec = { fadeIn() togetherWith fadeOut() },
                 label = "EntryContent"
-            ) { (isLoading, hasImage) ->
+            ) { (isBusy, hasImage, hasSticker) ->
                 when {
-                    isLoading -> {
-                        LoadingCard()
+                    isBusy -> {
+                        ProcessingCard(
+                            title = if (uiState.isSegmenting) "AI Segmentation In Progress" else "Processing Media...",
+                            status = if (uiState.isSegmenting) uiState.segmentationStatusText else "Extracting EXIF & downscaling to WebP"
+                        )
+                    }
+                    hasSticker && uiState.sticker != null && uiState.selectedImage != null -> {
+                        StickerReviewCard(
+                            sticker = uiState.sticker!!,
+                            originalImage = uiState.selectedImage!!,
+                            style = uiState.stickerStyle,
+                            onChangeStyle = { viewModel.openFallbackDialog() },
+                            onContinue = {
+                                Toast.makeText(
+                                    context,
+                                    "Sticker saved! Ready for Phase 4 Journal Entry flow.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        )
                     }
                     hasImage && uiState.selectedImage != null -> {
                         ImagePreviewCard(
                             processedImage = uiState.selectedImage!!,
-                            onRetake = { viewModel.clearSelectedImage() },
-                            onContinue = {
-                                Toast.makeText(
-                                    context,
-                                    "Ready for Phase 3: AI Subject Segmentation",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
+                            onGenerateSticker = { viewModel.generateSticker(StickerStyle.AI_SEGMENTED) },
+                            onOpenStyleOptions = { viewModel.openFallbackDialog() },
+                            onRetake = { viewModel.clearSelectedImage() }
                         )
                     }
                     else -> {
@@ -229,11 +271,24 @@ fun NewEntryScreen(
                 }
             }
         }
+
+        // Fallback / Style Selection Dialog
+        if (uiState.showFallbackDialog) {
+            FallbackStyleDialog(
+                onDismiss = { viewModel.dismissFallbackDialog() },
+                onSelectStyle = { style ->
+                    viewModel.generateSticker(style)
+                }
+            )
+        }
     }
 }
 
 @Composable
-private fun LoadingCard() {
+private fun ProcessingCard(
+    title: String,
+    status: String
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -246,18 +301,18 @@ private fun LoadingCard() {
         ) {
             CircularProgressIndicator(
                 color = BiteyOrange,
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(52.dp),
                 strokeWidth = 4.dp
             )
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(22.dp))
             Text(
-                text = "Processing Media...",
+                text = title,
                 style = MaterialTheme.typography.titleMedium,
                 color = InkPrimary
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Extracting EXIF & downscaling to WebP",
+                text = status,
                 style = MaterialTheme.typography.bodySmall,
                 color = InkSecondary
             )
@@ -294,7 +349,7 @@ private fun AcquisitionOptionsCard(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Gallery Button (Primary - no camera required!)
+            // Gallery Button
             Button(
                 onClick = onPickFromGallery,
                 colors = ButtonDefaults.buttonColors(
@@ -320,7 +375,7 @@ private fun AcquisitionOptionsCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Camera Button (Optional)
+            // Camera Button
             OutlinedButton(
                 onClick = onCaptureLivePhoto,
                 shape = RoundedCornerShape(16.dp),
@@ -348,8 +403,9 @@ private fun AcquisitionOptionsCard(
 @Composable
 private fun ImagePreviewCard(
     processedImage: ProcessedImage,
-    onRetake: () -> Unit,
-    onContinue: () -> Unit
+    onGenerateSticker: () -> Unit,
+    onOpenStyleOptions: () -> Unit,
+    onRetake: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -426,7 +482,7 @@ private fun ImagePreviewCard(
                         processedImage.exifMetadata.longitude
                     )
                 } else {
-                    "No GPS in file (will use current location in Phase 4)"
+                    "No GPS in file (will use location in Phase 4)"
                 }
 
                 MetadataRow(
@@ -451,7 +507,7 @@ private fun ImagePreviewCard(
 
         // Actions
         Button(
-            onClick = onContinue,
+            onClick = onGenerateSticker,
             colors = ButtonDefaults.buttonColors(
                 containerColor = BiteyOrange,
                 contentColor = StickerDieCutWhite
@@ -468,7 +524,238 @@ private fun ImagePreviewCard(
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = "Generate Food Sticker",
+                text = "Generate Food Sticker (AI)",
+                style = MaterialTheme.typography.labelLarge
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onOpenStyleOptions,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Crop,
+                    contentDescription = null,
+                    tint = InkSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Crop Styles",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = InkPrimary
+                )
+            }
+
+            OutlinedButton(
+                onClick = onRetake,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Refresh,
+                    contentDescription = null,
+                    tint = InkSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "New Photo",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = InkPrimary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StickerReviewCard(
+    sticker: CompositedSticker,
+    originalImage: ProcessedImage,
+    style: StickerStyle,
+    onChangeStyle: () -> Unit,
+    onContinue: () -> Unit
+) {
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // Tab row to toggle between Sticker and Original Photo
+        TabRow(
+            selectedTabIndex = selectedTab,
+            containerColor = SoftBackground,
+            contentColor = BiteyOrange,
+            indicator = { tabPositions ->
+                TabRowDefaults.SecondaryIndicator(
+                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                    color = BiteyOrange,
+                    height = 3.dp
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+        ) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick = { selectedTab = 0 },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Rounded.AutoAwesome,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Sticker View", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            )
+            Tab(
+                selected = selectedTab == 1,
+                onClick = { selectedTab = 1 },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Rounded.Layers,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Original Photo", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Display Frame
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .neumorphicCard(cornerRadius = 24.dp, elevation = 6.dp)
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (selectedTab == 0) {
+                // Sticker with die-cut effect
+                AsyncImage(
+                    model = sticker.file,
+                    contentDescription = "Die-Cut Food Sticker",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .dieCutStickerEffect(),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                // Original photo
+                AsyncImage(
+                    model = originalImage.file,
+                    contentDescription = "Original Photo",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(16.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // Sticker Info Badge Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .neumorphicCard(cornerRadius = 20.dp, elevation = 4.dp)
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Rounded.Style,
+                            contentDescription = null,
+                            tint = BiteyOrange,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Sticker Style",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = InkPrimary
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFFFF3E0))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = style.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = BiteyOrange
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                val stickerKb = sticker.sizeBytes / 1024
+                MetadataRow(
+                    icon = Icons.Rounded.Info,
+                    title = "Artifact",
+                    value = "${sticker.width} x ${sticker.height} px • ${stickerKb} KB WebP"
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                MetadataRow(
+                    icon = Icons.Rounded.CheckCircle,
+                    title = "Outline & Shadow",
+                    value = "12px die-cut white border + soft drop shadow"
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Action Buttons
+        Button(
+            onClick = onContinue,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = BiteyOrange,
+                contentColor = StickerDieCutWhite
+            ),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+        ) {
+            Text(
+                text = "Save & Continue to Journal Entry",
                 style = MaterialTheme.typography.labelLarge
             )
         }
@@ -476,23 +763,110 @@ private fun ImagePreviewCard(
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedButton(
-            onClick = onRetake,
+            onClick = onChangeStyle,
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
         ) {
             Icon(
-                imageVector = Icons.Rounded.Refresh,
+                imageVector = Icons.Rounded.Tune,
                 contentDescription = null,
                 tint = InkSecondary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Choose Another Photo",
+                text = "Change Sticker Style or Crop",
                 style = MaterialTheme.typography.labelLarge,
                 color = InkPrimary
+            )
+        }
+    }
+}
+
+@Composable
+private fun FallbackStyleDialog(
+    onDismiss: () -> Unit,
+    onSelectStyle: (StickerStyle) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Select Sticker Style",
+                style = MaterialTheme.typography.titleMedium,
+                color = InkPrimary
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Choose how your food is clipped into a die-cut sticker:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkSecondary
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                StyleOptionItem(
+                    title = "AI Subject Cutout",
+                    subtitle = "Automatically extracts the food foreground",
+                    onClick = { onSelectStyle(StickerStyle.AI_SEGMENTED) }
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                StyleOptionItem(
+                    title = "Circular Plate Badge",
+                    subtitle = "Classic round collectible sticker crop",
+                    onClick = { onSelectStyle(StickerStyle.CIRCULAR_BADGE) }
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                StyleOptionItem(
+                    title = "Polaroid Rounded Tile",
+                    subtitle = "Soft rounded rectangle tile with die-cut border",
+                    onClick = { onSelectStyle(StickerStyle.ROUNDED_TILE) }
+                )
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = InkSecondary)
+            }
+        },
+        containerColor = SoftBackground,
+        shape = RoundedCornerShape(24.dp)
+    )
+}
+
+@Composable
+private fun StyleOptionItem(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(NeumorphicSurface)
+            .clickable(onClick = onClick)
+            .padding(14.dp)
+    ) {
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = InkPrimary
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = InkMuted
             )
         }
     }
