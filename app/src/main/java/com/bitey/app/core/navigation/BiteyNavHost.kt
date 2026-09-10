@@ -39,7 +39,11 @@ fun BiteyNavHost(
         }
 
         composable(Screen.FateTable.route) {
-            FateTableScreen()
+            FateTableScreen(
+                onNavigateToNewEntry = {
+                    navController.navigate(Screen.NewEntry.route)
+                }
+            )
         }
 
         composable(Screen.Scrapbook.route) {
