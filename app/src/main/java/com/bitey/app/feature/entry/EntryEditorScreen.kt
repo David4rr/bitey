@@ -1,5 +1,6 @@
 package com.bitey.app.feature.entry
 
+import android.app.DatePickerDialog
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,8 +29,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.EditCalendar
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.MyLocation
@@ -59,6 +59,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -67,21 +69,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.bitey.app.core.database.model.MealType
 import com.bitey.app.core.database.model.TagEntity
+import com.bitey.app.core.ui.component.AnimatedFavoriteButton
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
-import com.bitey.app.core.ui.neumorphic.neumorphicCard
+import com.bitey.app.core.ui.neumorphic.minimalistCard
 import com.bitey.app.core.ui.theme.BiteyMint
 import com.bitey.app.core.ui.theme.BiteyOrange
-import com.bitey.app.core.ui.theme.InkMuted
-import com.bitey.app.core.ui.theme.InkPrimary
-import com.bitey.app.core.ui.theme.InkSecondary
-import com.bitey.app.core.ui.theme.NeumorphicSurface
-import com.bitey.app.core.ui.theme.SoftBackground
+import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.core.ui.theme.StickerDieCutWhite
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EntryEditorScreen(
@@ -89,7 +88,9 @@ fun EntryEditorScreen(
     onEntrySaved: () -> Unit,
     viewModel: EntryEditorViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val theme = LocalNeumorphicTheme.current
 
     LaunchedEffect(uiState.isSavedSuccessfully) {
         if (uiState.isSavedSuccessfully) {
@@ -97,10 +98,32 @@ fun EntryEditorScreen(
         }
     }
 
+    // Calendar date picker dialog for the date attribute
+    val calendar = remember(uiState.timestamp) {
+        Calendar.getInstance().apply { timeInMillis = uiState.timestamp }
+    }
+    val datePickerDialog = remember(uiState.timestamp) {
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val updatedCal = Calendar.getInstance().apply {
+                    timeInMillis = uiState.timestamp
+                    set(Calendar.YEAR, year)
+                    set(Calendar.MONTH, month)
+                    set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                }
+                viewModel.updateTimestamp(updatedCal.timeInMillis)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SoftBackground)
+            .background(theme.background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
@@ -114,14 +137,14 @@ fun EntryEditorScreen(
                 Box(
                     modifier = Modifier
                         .size(42.dp)
-                        .neumorphicCard(cornerRadius = 21.dp),
+                        .minimalistCard(cornerRadius = 21.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                             contentDescription = "Back",
-                            tint = InkPrimary
+                            tint = theme.inkPrimary
                         )
                     }
                 }
@@ -132,34 +155,27 @@ fun EntryEditorScreen(
                     Text(
                         text = "Journal Your Bite",
                         style = MaterialTheme.typography.titleLarge,
-                        color = InkPrimary
+                        color = theme.inkPrimary
                     )
                     Text(
                         text = "Document taste, memory & location",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = InkSecondary
+                        color = theme.inkSecondary
                     )
                 }
             }
 
-            // Favorite Toggle Button
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .neumorphicCard(cornerRadius = 21.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                IconButton(onClick = { viewModel.toggleFavorite() }) {
-                    Icon(
-                        imageVector = if (uiState.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                        contentDescription = "Favorite",
-                        tint = if (uiState.isFavorite) BiteyOrange else InkMuted
-                    )
-                }
-            }
+            // Animated Favorite Toggle Button
+            AnimatedFavoriteButton(
+                isFavorite = uiState.isFavorite,
+                onToggle = { viewModel.toggleFavorite() },
+                containerSize = 42.dp,
+                iconSize = 20.dp,
+                withNeumorphicContainer = true
+            )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         // Error message banner
         AnimatedVisibility(visible = uiState.errorMessage != null) {
@@ -181,20 +197,23 @@ fun EntryEditorScreen(
             }
         }
 
-        // Hero Preview Frame (Sticker or Photo)
+        // Hero Media Preview Frame
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1.25f)
-                .neumorphicCard(cornerRadius = 24.dp, elevation = 6.dp)
-                .padding(14.dp),
+                .aspectRatio(1.15f)
+                .minimalistCard(cornerRadius = 24.dp, elevation = 2.dp)
+                .padding(12.dp),
             contentAlignment = Alignment.Center
         ) {
-            val previewModel = if (uiState.isStickerMode && uiState.stickerPath != null) {
-                File(uiState.stickerPath!!)
-            } else if (uiState.imagePath.isNotBlank()) {
-                File(uiState.imagePath)
-            } else null
+            val previewModel = remember(uiState.isStickerMode, uiState.stickerPath, uiState.imagePath) {
+                val path = if (uiState.isStickerMode && uiState.stickerPath != null) {
+                    uiState.stickerPath
+                } else {
+                    uiState.imagePath
+                }
+                path?.let { File(it) }
+            }
 
             if (uiState.isStickerMode && uiState.stickerPath != null) {
                 AsyncImage(
@@ -223,7 +242,7 @@ fun EntryEditorScreen(
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(SoftBackground.copy(alpha = 0.92f))
+                        .background(theme.surface.copy(alpha = 0.92f))
                         .clickable { viewModel.toggleStickerMode() }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
@@ -238,7 +257,7 @@ fun EntryEditorScreen(
                         Text(
                             text = if (uiState.isStickerMode) "Sticker" else "Photo",
                             style = MaterialTheme.typography.labelSmall,
-                            color = InkPrimary
+                            color = theme.inkPrimary
                         )
                     }
                 }
@@ -251,29 +270,29 @@ fun EntryEditorScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .neumorphicCard(cornerRadius = 20.dp, elevation = 4.dp)
+                .minimalistCard(cornerRadius = 20.dp, elevation = 1.dp)
                 .padding(16.dp)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Dish Title",
                     style = MaterialTheme.typography.titleSmall,
-                    color = InkPrimary
+                    color = theme.inkPrimary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = uiState.dishTitle,
                     onValueChange = { viewModel.updateDishTitle(it) },
-                    placeholder = { Text("e.g. Smoked Wagyu Brisket", color = InkMuted) },
+                    placeholder = { Text("e.g. Smoked Wagyu Brisket", color = theme.inkMuted) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BiteyOrange,
                         unfocusedBorderColor = Color.Transparent,
-                        focusedContainerColor = NeumorphicSurface,
-                        unfocusedContainerColor = NeumorphicSurface,
-                        focusedTextColor = InkPrimary,
-                        unfocusedTextColor = InkPrimary
+                        focusedContainerColor = theme.surfaceVariant,
+                        unfocusedContainerColor = theme.surfaceVariant,
+                        focusedTextColor = theme.inkPrimary,
+                        unfocusedTextColor = theme.inkPrimary
                     ),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                     singleLine = true
@@ -283,18 +302,88 @@ fun EntryEditorScreen(
 
         Spacer(modifier = Modifier.height(18.dp))
 
+        // Interactive Date Attribute Card (Item 3)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .minimalistCard(cornerRadius = 20.dp, elevation = 1.dp)
+                .clickable { datePickerDialog.show() }
+                .padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(BiteyOrange.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.CalendarToday,
+                            contentDescription = "Activity Date",
+                            tint = BiteyOrange,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Activity Date",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = theme.inkPrimary
+                        )
+                        val formattedDate = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.US).format(Date(uiState.timestamp))
+                        Text(
+                            text = formattedDate,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = theme.inkSecondary
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(BiteyOrange.copy(alpha = 0.12f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Rounded.EditCalendar,
+                            contentDescription = null,
+                            tint = BiteyOrange,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Change",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = BiteyOrange
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
         // Meal Type Selector
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .neumorphicCard(cornerRadius = 20.dp, elevation = 4.dp)
+                .minimalistCard(cornerRadius = 20.dp, elevation = 1.dp)
                 .padding(16.dp)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Meal Type",
                     style = MaterialTheme.typography.titleSmall,
-                    color = InkPrimary
+                    color = theme.inkPrimary
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -315,7 +404,7 @@ fun EntryEditorScreen(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) BiteyOrange else NeumorphicSurface)
+                                .background(if (isSelected) BiteyOrange else theme.surfaceVariant)
                                 .clickable { viewModel.updateMealType(type) }
                                 .padding(vertical = 10.dp),
                             contentAlignment = Alignment.Center
@@ -323,7 +412,7 @@ fun EntryEditorScreen(
                             Text(
                                 text = label,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (isSelected) StickerDieCutWhite else InkSecondary,
+                                color = if (isSelected) StickerDieCutWhite else theme.inkSecondary,
                                 maxLines = 1
                             )
                         }
@@ -338,7 +427,7 @@ fun EntryEditorScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .neumorphicCard(cornerRadius = 20.dp, elevation = 4.dp)
+                .minimalistCard(cornerRadius = 20.dp, elevation = 1.dp)
                 .padding(16.dp)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -350,7 +439,7 @@ fun EntryEditorScreen(
                     Text(
                         text = "Rating",
                         style = MaterialTheme.typography.titleSmall,
-                        color = InkPrimary
+                        color = theme.inkPrimary
                     )
                     Text(
                         text = String.format(Locale.US, "%.1f / 5.0", uiState.rating),
@@ -375,7 +464,7 @@ fun EntryEditorScreen(
                             Icon(
                                 imageVector = if (isStarFilled) Icons.Rounded.Star else Icons.Rounded.StarBorder,
                                 contentDescription = "Star $i",
-                                tint = if (isStarFilled) BiteyOrange else InkMuted,
+                                tint = if (isStarFilled) BiteyOrange else theme.inkMuted,
                                 modifier = Modifier.size(32.dp)
                             )
                         }
@@ -399,7 +488,7 @@ fun EntryEditorScreen(
                     Text(
                         text = "Price (Optional)",
                         style = MaterialTheme.typography.titleSmall,
-                        color = InkPrimary
+                        color = theme.inkPrimary
                     )
                 }
 
@@ -413,13 +502,13 @@ fun EntryEditorScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(NeumorphicSurface)
+                            .background(theme.surfaceVariant)
                             .padding(horizontal = 14.dp, vertical = 14.dp)
                     ) {
                         Text(
                             text = uiState.currency,
                             style = MaterialTheme.typography.labelMedium,
-                            color = InkPrimary
+                            color = theme.inkPrimary
                         )
                     }
 
@@ -428,16 +517,16 @@ fun EntryEditorScreen(
                     OutlinedTextField(
                         value = uiState.priceString,
                         onValueChange = { viewModel.updatePrice(it) },
-                        placeholder = { Text("Amount (e.g. 65000)", color = InkMuted) },
+                        placeholder = { Text("Amount (e.g. 65000)", color = theme.inkMuted) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = BiteyOrange,
                             unfocusedBorderColor = Color.Transparent,
-                            focusedContainerColor = NeumorphicSurface,
-                            unfocusedContainerColor = NeumorphicSurface,
-                            focusedTextColor = InkPrimary,
-                            unfocusedTextColor = InkPrimary
+                            focusedContainerColor = theme.surfaceVariant,
+                            unfocusedContainerColor = theme.surfaceVariant,
+                            focusedTextColor = theme.inkPrimary,
+                            unfocusedTextColor = theme.inkPrimary
                         ),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true
@@ -452,7 +541,7 @@ fun EntryEditorScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .neumorphicCard(cornerRadius = 20.dp, elevation = 4.dp)
+                .minimalistCard(cornerRadius = 20.dp, elevation = 1.dp)
                 .padding(16.dp)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -472,7 +561,7 @@ fun EntryEditorScreen(
                         Text(
                             text = "Establishment & Location",
                             style = MaterialTheme.typography.titleSmall,
-                            color = InkPrimary
+                            color = theme.inkPrimary
                         )
                     }
 
@@ -491,7 +580,7 @@ fun EntryEditorScreen(
                             Icon(
                                 imageVector = Icons.Rounded.MyLocation,
                                 contentDescription = "Refresh Location",
-                                tint = InkSecondary,
+                                tint = theme.inkSecondary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -503,16 +592,16 @@ fun EntryEditorScreen(
                 OutlinedTextField(
                     value = uiState.locationName,
                     onValueChange = { viewModel.updateLocationName(it) },
-                    placeholder = { Text("Restaurant or street name", color = InkMuted) },
+                    placeholder = { Text("Restaurant or street name", color = theme.inkMuted) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BiteyOrange,
                         unfocusedBorderColor = Color.Transparent,
-                        focusedContainerColor = NeumorphicSurface,
-                        unfocusedContainerColor = NeumorphicSurface,
-                        focusedTextColor = InkPrimary,
-                        unfocusedTextColor = InkPrimary
+                        focusedContainerColor = theme.surfaceVariant,
+                        unfocusedContainerColor = theme.surfaceVariant,
+                        focusedTextColor = theme.inkPrimary,
+                        unfocusedTextColor = theme.inkPrimary
                     ),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                     singleLine = true
@@ -523,7 +612,7 @@ fun EntryEditorScreen(
                     Text(
                         text = String.format(Locale.US, "GPS: %.4f, %.4f", uiState.latitude, uiState.longitude),
                         style = MaterialTheme.typography.bodySmall,
-                        color = InkMuted
+                        color = theme.inkMuted
                     )
                 }
             }
@@ -535,27 +624,27 @@ fun EntryEditorScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .neumorphicCard(cornerRadius = 20.dp, elevation = 4.dp)
+                .minimalistCard(cornerRadius = 20.dp, elevation = 1.dp)
                 .padding(16.dp)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Palate Impressions",
                     style = MaterialTheme.typography.titleSmall,
-                    color = InkPrimary
+                    color = theme.inkPrimary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Textures, aroma, dining companions, or memory",
                     style = MaterialTheme.typography.bodySmall,
-                    color = InkMuted
+                    color = theme.inkMuted
                 )
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
                     value = uiState.notes,
                     onValueChange = { viewModel.updateNotes(it) },
-                    placeholder = { Text("Crispy skin, rich broth with hint of lime...", color = InkMuted) },
+                    placeholder = { Text("Crispy skin, rich broth with hint of lime...", color = theme.inkMuted) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(120.dp),
@@ -563,10 +652,10 @@ fun EntryEditorScreen(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BiteyOrange,
                         unfocusedBorderColor = Color.Transparent,
-                        focusedContainerColor = NeumorphicSurface,
-                        unfocusedContainerColor = NeumorphicSurface,
-                        focusedTextColor = InkPrimary,
-                        unfocusedTextColor = InkPrimary
+                        focusedContainerColor = theme.surfaceVariant,
+                        unfocusedContainerColor = theme.surfaceVariant,
+                        focusedTextColor = theme.inkPrimary,
+                        unfocusedTextColor = theme.inkPrimary
                     ),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     maxLines = 5
@@ -580,7 +669,7 @@ fun EntryEditorScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .neumorphicCard(cornerRadius = 20.dp, elevation = 4.dp)
+                .minimalistCard(cornerRadius = 20.dp, elevation = 1.dp)
                 .padding(16.dp)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -600,7 +689,7 @@ fun EntryEditorScreen(
                         Text(
                             text = "Tags & Characteristics",
                             style = MaterialTheme.typography.titleSmall,
-                            color = InkPrimary
+                            color = theme.inkPrimary
                         )
                     }
 
@@ -646,14 +735,14 @@ fun EntryEditorScreen(
             Icon(
                 imageVector = Icons.Rounded.CalendarToday,
                 contentDescription = null,
-                tint = InkMuted,
+                tint = theme.inkMuted,
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = formattedDate,
                 style = MaterialTheme.typography.bodySmall,
-                color = InkMuted
+                color = theme.inkMuted
             )
         }
 
@@ -712,10 +801,11 @@ private fun TagChip(
     isSelected: Boolean,
     onToggle: () -> Unit
 ) {
+    val theme = LocalNeumorphicTheme.current
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) BiteyMint else NeumorphicSurface)
+            .background(if (isSelected) BiteyMint else theme.surfaceVariant)
             .clickable(onClick = onToggle)
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
@@ -732,7 +822,7 @@ private fun TagChip(
             Text(
                 text = tag.tagName,
                 style = MaterialTheme.typography.labelSmall,
-                color = if (isSelected) StickerDieCutWhite else InkPrimary
+                color = if (isSelected) StickerDieCutWhite else theme.inkPrimary
             )
         }
     }
@@ -743,6 +833,7 @@ private fun NewTagDialog(
     onDismiss: () -> Unit,
     onConfirm: (name: String, category: String?) -> Unit
 ) {
+    val theme = LocalNeumorphicTheme.current
     var tagName by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("Taste") }
     val categories = listOf("Taste", "Ambience", "Diet", "Type")
@@ -753,7 +844,7 @@ private fun NewTagDialog(
             Text(
                 text = "Add Custom Tag",
                 style = MaterialTheme.typography.titleMedium,
-                color = InkPrimary
+                color = theme.inkPrimary
             )
         },
         text = {
@@ -761,16 +852,16 @@ private fun NewTagDialog(
                 OutlinedTextField(
                     value = tagName,
                     onValueChange = { tagName = it },
-                    placeholder = { Text("e.g. Extra Crispy", color = InkMuted) },
+                    placeholder = { Text("e.g. Extra Crispy", color = theme.inkMuted) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BiteyOrange,
-                        unfocusedBorderColor = InkMuted.copy(alpha = 0.3f),
-                        focusedContainerColor = NeumorphicSurface,
-                        unfocusedContainerColor = NeumorphicSurface,
-                        focusedTextColor = InkPrimary,
-                        unfocusedTextColor = InkPrimary
+                        unfocusedBorderColor = theme.border,
+                        focusedContainerColor = theme.surfaceVariant,
+                        unfocusedContainerColor = theme.surfaceVariant,
+                        focusedTextColor = theme.inkPrimary,
+                        unfocusedTextColor = theme.inkPrimary
                     ),
                     singleLine = true
                 )
@@ -780,7 +871,7 @@ private fun NewTagDialog(
                 Text(
                     text = "Category",
                     style = MaterialTheme.typography.labelMedium,
-                    color = InkSecondary
+                    color = theme.inkSecondary
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -795,7 +886,7 @@ private fun NewTagDialog(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (isCatSelected) BiteyOrange else NeumorphicSurface)
+                                .background(if (isCatSelected) BiteyOrange else theme.surfaceVariant)
                                 .clickable { selectedCategory = category }
                                 .padding(vertical = 8.dp),
                             contentAlignment = Alignment.Center
@@ -803,7 +894,7 @@ private fun NewTagDialog(
                             Text(
                                 text = category,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (isCatSelected) StickerDieCutWhite else InkSecondary
+                                color = if (isCatSelected) StickerDieCutWhite else theme.inkSecondary
                             )
                         }
                     }
@@ -829,10 +920,10 @@ private fun NewTagDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = InkSecondary)
+                Text("Cancel", color = theme.inkSecondary)
             }
         },
-        containerColor = SoftBackground,
+        containerColor = theme.surface,
         shape = RoundedCornerShape(20.dp)
     )
 }

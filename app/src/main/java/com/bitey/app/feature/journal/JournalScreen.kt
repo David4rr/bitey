@@ -1,7 +1,7 @@
 package com.bitey.app.feature.journal
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,27 +24,29 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Notes
+import androidx.compose.material.icons.automirrored.rounded.ViewList
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.CalendarToday
-import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Tag
-import androidx.compose.material.icons.rounded.ViewList
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -56,7 +58,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -77,16 +78,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.bitey.app.core.database.model.MealType
 import com.bitey.app.core.database.model.PlateEntryWithTags
+import com.bitey.app.core.ui.component.AnimatedFavoriteButton
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
-import com.bitey.app.core.ui.neumorphic.neumorphicCard
+import com.bitey.app.core.ui.neumorphic.minimalistCard
+import com.bitey.app.core.ui.neumorphic.minimalistInset
 import com.bitey.app.core.ui.theme.BiteyMint
 import com.bitey.app.core.ui.theme.BiteyOrange
-import com.bitey.app.core.ui.theme.InkMuted
-import com.bitey.app.core.ui.theme.InkPrimary
-import com.bitey.app.core.ui.theme.InkSecondary
-import com.bitey.app.core.ui.theme.NeumorphicSurface
-import com.bitey.app.core.ui.theme.SoftBackground
+import com.bitey.app.core.ui.theme.BiteyWarmYellow
+import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
+import com.bitey.app.core.ui.theme.LocalOnThemeModeChanged
+import com.bitey.app.core.ui.theme.LocalThemeMode
 import com.bitey.app.core.ui.theme.StickerDieCutWhite
+import com.bitey.app.core.ui.theme.ThemeMode
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -95,107 +98,136 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JournalScreen(
-    onNavigateToNewEntry: () -> Unit,
-    viewModel: JournalViewModel = hiltViewModel()
+    viewModel: JournalViewModel = hiltViewModel(),
+    onNavigateToNewEntry: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val theme = LocalNeumorphicTheme.current
+    val currentThemeMode = LocalThemeMode.current
+    val onThemeModeChanged = LocalOnThemeModeChanged.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SoftBackground)
+            .background(theme.background)
     ) {
-        // Top Bar
+        // Minimalist Top Header
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = 20.dp, vertical = 14.dp)
         ) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "Bitey",
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = (-0.5).sp
-                        ),
-                        color = InkPrimary
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                        color = theme.inkPrimary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFFFF3E0))
+                            .background(BiteyOrange.copy(alpha = 0.12f))
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "${uiState.totalEntriesCount} Bites",
-                            style = MaterialTheme.typography.labelSmall,
+                            text = "${uiState.totalEntriesCount} bites",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                             color = BiteyOrange
                         )
                     }
                 }
                 Text(
-                    text = "Tactile Food Journal & Scrapbook",
+                    text = "Your Culinary Journal",
                     style = MaterialTheme.typography.bodySmall,
-                    color = InkSecondary
+                    color = theme.inkSecondary
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Favorites filter toggle
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Theme Mode Selector Toggle Button
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .neumorphicCard(cornerRadius = 20.dp),
+                        .size(38.dp)
+                        .minimalistCard(cornerRadius = 19.dp, elevation = 0.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    IconButton(onClick = { viewModel.toggleFavoritesOnly() }) {
+                    IconButton(onClick = {
+                        val nextMode = when (currentThemeMode) {
+                            ThemeMode.AUTO -> ThemeMode.LIGHT
+                            ThemeMode.LIGHT -> ThemeMode.DARK
+                            ThemeMode.DARK -> ThemeMode.AUTO
+                        }
+                        onThemeModeChanged(nextMode)
+                    }) {
                         Icon(
-                            imageVector = if (uiState.isFavoritesOnly) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                            contentDescription = "Favorites",
-                            tint = if (uiState.isFavoritesOnly) BiteyOrange else InkSecondary,
-                            modifier = Modifier.size(20.dp)
+                            imageVector = when (currentThemeMode) {
+                                ThemeMode.AUTO -> Icons.Rounded.BrightnessAuto
+                                ThemeMode.LIGHT -> Icons.Rounded.LightMode
+                                ThemeMode.DARK -> Icons.Rounded.DarkMode
+                            },
+                            contentDescription = "Theme: ${currentThemeMode.label}",
+                            tint = if (currentThemeMode != ThemeMode.AUTO) BiteyOrange else theme.inkSecondary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
 
-                // Grid / List toggle
+                // Favorites Filter Toggle Button
+                AnimatedFavoriteButton(
+                    isFavorite = uiState.isFavoritesOnly,
+                    onToggle = { viewModel.toggleFavoritesOnly() },
+                    containerSize = 38.dp,
+                    iconSize = 18.dp,
+                    withNeumorphicContainer = true
+                )
+
+                // View Mode Toggle Button (Sticker Card View vs List View)
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .neumorphicCard(cornerRadius = 20.dp),
+                        .size(38.dp)
+                        .minimalistCard(cornerRadius = 19.dp, elevation = 0.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     IconButton(onClick = { viewModel.toggleViewMode() }) {
                         Icon(
-                            imageVector = if (uiState.isGridView) Icons.Rounded.ViewList else Icons.Rounded.GridView,
-                            contentDescription = "Toggle View",
-                            tint = InkPrimary,
-                            modifier = Modifier.size(20.dp)
+                            imageVector = if (uiState.isGridView) Icons.AutoMirrored.Rounded.ViewList else Icons.Rounded.GridView,
+                            contentDescription = if (uiState.isGridView) "Switch to List View" else "Switch to Card View",
+                            tint = if (uiState.isGridView) BiteyOrange else theme.inkSecondary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
             }
         }
 
-        // Search Bar
+        // Minimalist Search Bar
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = 20.dp, vertical = 4.dp)
         ) {
             OutlinedTextField(
                 value = uiState.searchQuery,
                 onValueChange = { viewModel.updateSearchQuery(it) },
-                placeholder = { Text("Search dish, notes, or location...", color = InkMuted) },
+                placeholder = {
+                    Text(
+                        text = "Search dishes, places, tags, or notes...",
+                        color = theme.inkMuted,
+                        fontSize = 14.sp
+                    )
+                },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Rounded.Search,
-                        contentDescription = null,
-                        tint = InkMuted,
+                        contentDescription = "Search",
+                        tint = theme.inkMuted,
                         modifier = Modifier.size(20.dp)
                     )
                 },
@@ -205,7 +237,7 @@ fun JournalScreen(
                             Icon(
                                 imageVector = Icons.Rounded.Close,
                                 contentDescription = "Clear",
-                                tint = InkMuted,
+                                tint = theme.inkMuted,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -213,23 +245,23 @@ fun JournalScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(50.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = BiteyOrange,
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedContainerColor = NeumorphicSurface,
-                    unfocusedContainerColor = NeumorphicSurface,
-                    focusedTextColor = InkPrimary,
-                    unfocusedTextColor = InkPrimary
+                    unfocusedBorderColor = theme.border,
+                    focusedContainerColor = theme.surface,
+                    unfocusedContainerColor = theme.surface,
+                    focusedTextColor = theme.inkPrimary,
+                    unfocusedTextColor = theme.inkPrimary
                 ),
                 singleLine = true
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        // Horizontal Filter Chips
+        // Horizontal Filter Chips (Meal Types & Custom Tags)
         LazyRow(
             contentPadding = PaddingValues(horizontal = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -237,10 +269,9 @@ fun JournalScreen(
         ) {
             // All Chip
             item {
-                val isAllSelected = uiState.selectedMealType == null && uiState.selectedTagId == null && !uiState.isFavoritesOnly
                 FilterPill(
                     text = "All",
-                    isSelected = isAllSelected,
+                    isSelected = uiState.selectedMealType == null && uiState.selectedTagId == null,
                     onClick = {
                         viewModel.selectMealType(null)
                         viewModel.selectTag(null)
@@ -249,36 +280,31 @@ fun JournalScreen(
             }
 
             // Meal Types
-            items(MealType.entries) { mealType ->
+            items(MealType.entries.toTypedArray()) { mealType ->
                 val isSelected = uiState.selectedMealType == mealType
-                val label = when (mealType) {
-                    MealType.BREAKFAST -> "Breakfast"
-                    MealType.LUNCH -> "Lunch"
-                    MealType.DINNER -> "Dinner"
-                    MealType.SNACK -> "Snack"
-                    MealType.LATE_NIGHT -> "Late Night"
-                }
                 FilterPill(
-                    text = label,
+                    text = mealType.name.lowercase().replaceFirstChar { it.uppercase() },
                     isSelected = isSelected,
-                    onClick = { viewModel.selectMealType(mealType) }
+                    onClick = {
+                        viewModel.selectMealType(if (isSelected) null else mealType)
+                    }
                 )
             }
 
-            // Tags
+            // Custom & Standard Tags
             items(uiState.availableTags) { tag ->
                 val isSelected = uiState.selectedTagId == tag.tagId
                 FilterPill(
-                    text = tag.tagName,
+                    text = "#${tag.tagName}",
                     isSelected = isSelected,
                     onClick = { viewModel.selectTag(tag.tagId) }
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        // Main Content Area
+        // Main Content Area: Chronological Vertical List of Minimalist Food Cards
         when {
             uiState.entries.isEmpty() && uiState.totalEntriesCount == 0 -> {
                 EmptyJournalPrompt(onCaptureClick = onNavigateToNewEntry)
@@ -296,13 +322,13 @@ fun JournalScreen(
             uiState.isGridView -> {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(uiState.entries, key = { it.entry.id }) { item ->
-                        StickerGridCard(
+                        StickerCard(
                             item = item,
                             onClick = { viewModel.selectEntryForDetail(item) },
                             onToggleFavorite = { viewModel.toggleFavorite(item.entry) }
@@ -312,16 +338,57 @@ fun JournalScreen(
             }
             else -> {
                 LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(uiState.entries, key = { it.entry.id }) { item ->
-                        PlateListCard(
-                            item = item,
-                            onClick = { viewModel.selectEntryForDetail(item) },
-                            onToggleFavorite = { viewModel.toggleFavorite(item.entry) }
-                        )
+                    uiState.dateGroups.forEach { group ->
+                        // Chronological Date Header
+                        item(key = "header_${group.dateLabel}") {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 10.dp, bottom = 4.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(BiteyOrange)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = group.dateLabel,
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = theme.inkPrimary
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(theme.surfaceVariant)
+                                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "${group.entries.size} ${if (group.entries.size == 1) "bite" else "bites"}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = theme.inkSecondary
+                                    )
+                                }
+                            }
+                        }
+
+                        // Food Entry Cards under this date group
+                        items(group.entries, key = { it.entry.id }) { item ->
+                            PlateEntryCard(
+                                item = item,
+                                onClick = { viewModel.selectEntryForDetail(item) },
+                                onToggleFavorite = { viewModel.toggleFavorite(item.entry) }
+                            )
+                        }
                     }
                 }
             }
@@ -334,8 +401,9 @@ fun JournalScreen(
         ModalBottomSheet(
             onDismissRequest = { viewModel.selectEntryForDetail(null) },
             sheetState = sheetState,
-            containerColor = SoftBackground,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+            containerColor = theme.surface,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle = null
         ) {
             JournalDetailSheet(
                 item = item,
@@ -343,51 +411,39 @@ fun JournalScreen(
                 onToggleFavorite = { viewModel.toggleFavorite(item.entry) },
                 onDelete = {
                     viewModel.deleteEntry(item.entry)
+                    viewModel.selectEntryForDetail(null)
                 }
             )
         }
     }
 }
 
+/**
+ * Minimalist Sticker Card:
+ * Highlights the authentic die-cut food sticker front-and-center inside a clean,
+ * modern card with crisp 1dp border, dish title, meal badge, rating, and location.
+ */
 @Composable
-private fun FilterPill(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) BiteyOrange else NeumorphicSurface)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (isSelected) StickerDieCutWhite else InkSecondary
-        )
-    }
-}
-
-@Composable
-private fun StickerGridCard(
+private fun StickerCard(
     item: PlateEntryWithTags,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit
 ) {
     val entry = item.entry
-    val imageFile = File(if (entry.isStickerMode && entry.stickerImagePath != null) entry.stickerImagePath else entry.fullImagePath)
+    val theme = LocalNeumorphicTheme.current
+    val imageFile = remember(entry) {
+        File(if (entry.isStickerMode && entry.stickerImagePath != null) entry.stickerImagePath else entry.fullImagePath)
+    }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .neumorphicCard(cornerRadius = 20.dp, elevation = 4.dp)
+            .minimalistCard(cornerRadius = 18.dp, elevation = 1.dp)
             .clickable(onClick = onClick)
             .padding(12.dp)
     ) {
         Column {
-            // Sticker Frame
+            // Food Sticker Hero Frame
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -414,7 +470,7 @@ private fun StickerGridCard(
                     )
                 }
 
-                // Favorite Heart Overlay
+                // Favorite Heart Button
                 IconButton(
                     onClick = onToggleFavorite,
                     modifier = Modifier
@@ -423,8 +479,8 @@ private fun StickerGridCard(
                 ) {
                     Icon(
                         imageVector = if (entry.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                        contentDescription = null,
-                        tint = if (entry.isFavorite) BiteyOrange else InkMuted,
+                        contentDescription = "Toggle Favorite",
+                        tint = if (entry.isFavorite) BiteyOrange else theme.inkMuted,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -435,100 +491,123 @@ private fun StickerGridCard(
             // Dish Title
             Text(
                 text = entry.title,
-                style = MaterialTheme.typography.titleSmall,
-                color = InkPrimary,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = theme.inkPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Rating & Location Row
+            // Meal badge & Rating Row
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                val mealLabel = entry.mealType.name.lowercase().replaceFirstChar { it.uppercase() }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(theme.surfaceVariant)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = mealLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = theme.inkSecondary,
+                        fontSize = 11.sp
+                    )
+                }
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Rounded.Star,
                         contentDescription = null,
                         tint = BiteyOrange,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(13.dp)
                     )
                     Spacer(modifier = Modifier.width(3.dp))
                     Text(
                         text = String.format(Locale.US, "%.1f", entry.rating),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = InkPrimary
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = theme.inkPrimary
                     )
                 }
+            }
 
-                entry.locationName?.let { loc ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Rounded.LocationOn,
-                            contentDescription = null,
-                            tint = InkMuted,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text(
-                            text = loc,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = InkMuted,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.width(70.dp)
-                        )
-                    }
+            entry.locationName?.let { loc ->
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Rounded.LocationOn,
+                        contentDescription = null,
+                        tint = theme.inkMuted,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = loc,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = theme.inkMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
     }
 }
 
+/**
+ * Minimalist Food Entry Card:
+ * Displays the complete entry details (title, rating, meal type, time, price, tags, location)
+ * while showing ONLY the organic sticker image without any square grid/box frame!
+ */
 @Composable
-private fun PlateListCard(
+private fun PlateEntryCard(
     item: PlateEntryWithTags,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit
 ) {
     val entry = item.entry
-    val imageFile = File(if (entry.isStickerMode && entry.stickerImagePath != null) entry.stickerImagePath else entry.fullImagePath)
+    val theme = LocalNeumorphicTheme.current
+    val imageFile = remember(entry) {
+        File(if (entry.isStickerMode && entry.stickerImagePath != null) entry.stickerImagePath else entry.fullImagePath)
+    }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .neumorphicCard(cornerRadius = 20.dp, elevation = 4.dp)
+            .minimalistCard(cornerRadius = 18.dp, elevation = 1.dp)
             .clickable(onClick = onClick)
-            .padding(12.dp)
+            .padding(14.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Thumbnail Image Frame
+            // Food Sticker: ONLY the sticker image, floating with transparent background.
+            // NO rectangular box, NO frame, and NO grid around the sticker!
             Box(
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(14.dp)),
+                    .size(86.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (entry.isStickerMode && entry.stickerImagePath != null) {
                     AsyncImage(
                         model = imageFile,
                         contentDescription = entry.title,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .dieCutStickerEffect(),
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Fit
                     )
                 } else {
                     AsyncImage(
                         model = imageFile,
                         contentDescription = entry.title,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(14.dp)),
                         contentScale = ContentScale.Crop
                     )
                 }
@@ -536,76 +615,173 @@ private fun PlateListCard(
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            // Details
+            // Entry Details
             Column(modifier = Modifier.weight(1f)) {
+                // Dish Title
                 Text(
                     text = entry.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = InkPrimary,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = theme.inkPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
+                // Meal Type badge & Time
+                val timeFormat = SimpleDateFormat("h:mm a", Locale.US).format(Date(entry.timestamp))
+                val mealLabel = entry.mealType.name.lowercase().replaceFirstChar { it.uppercase() }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Rounded.Star,
-                        contentDescription = null,
-                        tint = BiteyOrange,
-                        modifier = Modifier.size(14.dp)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(theme.surfaceVariant)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = mealLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = theme.inkSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = timeFormat,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = theme.inkMuted,
+                        fontSize = 12.sp
                     )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Rating & Price
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    for (i in 1..5) {
+                        Icon(
+                            imageVector = Icons.Rounded.Star,
+                            contentDescription = null,
+                            tint = if (entry.rating >= i) BiteyWarmYellow else theme.inkMuted.copy(alpha = 0.3f),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = String.format(Locale.US, "%.1f", entry.rating),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = InkPrimary
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                        color = theme.inkPrimary
                     )
 
-                    entry.price?.let { p ->
-                        Spacer(modifier = Modifier.width(10.dp))
+                    entry.price?.let { price ->
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "${entry.currency} ${p.toInt()}",
-                            style = MaterialTheme.typography.labelSmall,
+                            text = "${entry.currency} ${price.toInt()}",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                             color = BiteyMint
                         )
                     }
                 }
 
+                // Location if available
                 entry.locationName?.let { loc ->
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Rounded.LocationOn,
                             contentDescription = null,
-                            tint = InkMuted,
-                            modifier = Modifier.size(12.dp)
+                            tint = BiteyOrange,
+                            modifier = Modifier.size(13.dp)
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Text(
                             text = loc,
                             style = MaterialTheme.typography.bodySmall,
-                            color = InkMuted,
+                            color = theme.inkMuted,
+                            fontSize = 11.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
+
+                // Custom & Standard Tags
+                if (item.tags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        item.tags.take(3).forEach { tag ->
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(theme.surfaceVariant)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "#${tag.tagName}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = theme.inkSecondary,
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
-            // Favorite Button
-            IconButton(onClick = onToggleFavorite) {
-                Icon(
-                    imageVector = if (entry.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                    contentDescription = null,
-                    tint = if (entry.isFavorite) BiteyOrange else InkMuted,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Animated Favorite Heart Button
+            AnimatedFavoriteButton(
+                isFavorite = entry.isFavorite,
+                onToggle = onToggleFavorite,
+                containerSize = 36.dp,
+                iconSize = 20.dp,
+                withNeumorphicContainer = false
+            )
         }
     }
 }
 
+/**
+ * Minimalist Filter Pill Chip.
+ */
+@Composable
+private fun FilterPill(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val theme = LocalNeumorphicTheme.current
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isSelected) BiteyOrange else theme.surface)
+            .border(
+                width = 1.dp,
+                color = if (isSelected) BiteyOrange else theme.border,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 7.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+            ),
+            color = if (isSelected) StickerDieCutWhite else theme.inkSecondary
+        )
+    }
+}
+
+/**
+ * Detail View refactored to clean, user-friendly Minimalist Design.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun JournalDetailSheet(
@@ -615,239 +791,329 @@ private fun JournalDetailSheet(
     onDelete: () -> Unit
 ) {
     val entry = item.entry
+    val theme = LocalNeumorphicTheme.current
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var isShowingSticker by remember { mutableStateOf(entry.isStickerMode && entry.stickerImagePath != null) }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 16.dp)
+            .background(theme.surface)
+            .padding(horizontal = 24.dp, vertical = 18.dp)
     ) {
-        // Sheet Header
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column {
-                Text(
-                    text = entry.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = InkPrimary
-                )
-                val dateStr = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.US).format(Date(entry.timestamp))
-                Text(
-                    text = "$dateStr • ${entry.mealType.name.lowercase().replaceFirstChar { it.uppercase() }}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = InkSecondary
-                )
-            }
-
-            Row {
-                IconButton(onClick = onToggleFavorite) {
-                    Icon(
-                        imageVector = if (entry.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                        contentDescription = null,
-                        tint = if (entry.isFavorite) BiteyOrange else InkMuted
-                    )
-                }
-                IconButton(onClick = { showDeleteConfirm = true }) {
-                    Icon(
-                        imageVector = Icons.Rounded.Delete,
-                        contentDescription = "Delete",
-                        tint = Color(0xFFE57373)
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Big Preview Frame
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1.2f)
-                .neumorphicCard(cornerRadius = 24.dp, elevation = 6.dp)
-                .padding(14.dp),
-            contentAlignment = Alignment.Center
+                .verticalScroll(rememberScrollState())
         ) {
-            val fileToShow = if (isShowingSticker && entry.stickerImagePath != null) {
-                File(entry.stickerImagePath)
-            } else {
-                File(entry.fullImagePath)
-            }
+            // Drag handle pill
+            Box(
+                modifier = Modifier
+                    .size(width = 40.dp, height = 4.dp)
+                    .clip(CircleShape)
+                    .background(theme.inkMuted.copy(alpha = 0.35f))
+                    .align(Alignment.CenterHorizontally)
+            )
 
-            if (isShowingSticker && entry.stickerImagePath != null) {
-                AsyncImage(
-                    model = fileToShow,
-                    contentDescription = entry.title,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .dieCutStickerEffect(),
-                    contentScale = ContentScale.Fit
-                )
-            } else {
-                AsyncImage(
-                    model = fileToShow,
-                    contentDescription = entry.title,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(16.dp)),
-                    contentScale = ContentScale.Crop
-                )
-            }
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Mode toggle
-            if (entry.stickerImagePath != null) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(SoftBackground.copy(alpha = 0.92f))
-                        .clickable { isShowingSticker = !isShowingSticker }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+            // Sheet Header with Action Buttons
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = entry.title,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = theme.inkPrimary
+                    )
+                    val dateStr = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.US).format(Date(entry.timestamp))
+                    Text(
+                        text = "$dateStr • ${entry.mealType.name.lowercase().replaceFirstChar { it.uppercase() }}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = theme.inkSecondary
+                    )
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = if (isShowingSticker) Icons.Rounded.AutoAwesome else Icons.Rounded.Layers,
-                            contentDescription = null,
-                            tint = BiteyOrange,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (isShowingSticker) "Sticker" else "Photo",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = InkPrimary
-                        )
+                    // Animated Favorite Button
+                    AnimatedFavoriteButton(
+                        isFavorite = entry.isFavorite,
+                        onToggle = onToggleFavorite,
+                        containerSize = 38.dp,
+                        iconSize = 20.dp,
+                        withNeumorphicContainer = true
+                    )
+
+                    // Delete Button
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .minimalistCard(cornerRadius = 19.dp, elevation = 0.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconButton(onClick = { showDeleteConfirm = true }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Delete,
+                                contentDescription = "Delete Entry",
+                                tint = Color(0xFFEF4444),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    // Close Button
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .minimalistCard(cornerRadius = 19.dp, elevation = 0.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconButton(onClick = onClose) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = "Close",
+                                tint = theme.inkSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-        // Rating & Price
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                for (i in 1..5) {
-                    Icon(
-                        imageVector = Icons.Rounded.Star,
-                        contentDescription = null,
-                        tint = if (entry.rating >= i) BiteyOrange else InkMuted.copy(alpha = 0.3f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = String.format(Locale.US, "%.1f", entry.rating),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = InkPrimary
-                )
-            }
-
-            entry.price?.let { price ->
-                Text(
-                    text = "${entry.currency} ${price.toInt()}",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = BiteyMint
-                )
-            }
-        }
-
-        // Location
-        entry.locationName?.let { loc ->
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Rounded.LocationOn,
-                    contentDescription = null,
-                    tint = BiteyOrange,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = loc,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = InkPrimary
-                )
-            }
-        }
-
-        // Notes
-        entry.note?.takeIf { it.isNotBlank() }?.let { notes ->
-            Spacer(modifier = Modifier.height(12.dp))
+            // Hero Preview Frame
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(NeumorphicSurface)
-                    .padding(14.dp)
+                    .aspectRatio(1.25f)
+                    .minimalistCard(cornerRadius = 20.dp, elevation = 0.dp)
+                    .background(theme.surfaceVariant)
+                    .padding(12.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = notes,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = InkSecondary
-                )
-            }
-        }
+                val currentFile = if (isShowingSticker && entry.stickerImagePath != null) {
+                    File(entry.stickerImagePath)
+                } else {
+                    File(entry.fullImagePath)
+                }
 
-        // Tags
-        if (item.tags.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(12.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                item.tags.forEach { tag ->
+                if (isShowingSticker && entry.stickerImagePath != null) {
+                    AsyncImage(
+                        model = currentFile,
+                        contentDescription = entry.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    AsyncImage(
+                        model = currentFile,
+                        contentDescription = entry.title,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(14.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                // Toggle between Sticker and Original Photo (if sticker mode available)
+                if (entry.stickerImagePath != null) {
                     Box(
                         modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(NeumorphicSurface)
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .background(theme.surface.copy(alpha = 0.92f))
+                            .border(1.dp, theme.border, RoundedCornerShape(10.dp))
+                            .clickable { isShowingSticker = !isShowingSticker }
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
                     ) {
-                        Text(
-                            text = tag.tagName,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = InkSecondary
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = if (isShowingSticker) Icons.Rounded.Layers else Icons.Rounded.AutoAwesome,
+                                contentDescription = null,
+                                tint = BiteyOrange,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (isShowingSticker) "View Photo" else "View Sticker",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = theme.inkPrimary
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Rating & Price Strip
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .minimalistCard(cornerRadius = 14.dp, elevation = 0.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    for (i in 1..5) {
+                        Icon(
+                            imageVector = Icons.Rounded.Star,
+                            contentDescription = null,
+                            tint = if (entry.rating >= i) BiteyWarmYellow else theme.inkMuted.copy(alpha = 0.3f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = String.format(Locale.US, "%.1f", entry.rating),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = theme.inkPrimary
+                    )
+                }
+
+                entry.price?.let { price ->
+                    Text(
+                        text = "${entry.currency} ${price.toInt()}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = BiteyMint
+                    )
+                }
+            }
+
+            // Location card if present
+            entry.locationName?.let { location ->
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .minimalistCard(cornerRadius = 14.dp, elevation = 0.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.LocationOn,
+                        contentDescription = null,
+                        tint = BiteyOrange,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = location,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = theme.inkPrimary
+                    )
+                }
+            }
+
+            // Notes / Palate impressions
+            if (!entry.note.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Palate Impressions",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = theme.inkSecondary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .minimalistInset(cornerRadius = 14.dp)
+                        .padding(14.dp)
+                ) {
+                    Text(
+                        text = entry.note,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = theme.inkPrimary,
+                        lineHeight = 22.sp
+                    )
+                }
+            }
+
+            // Tags section
+            if (item.tags.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                    text = "Tags & Flavors",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = theme.inkSecondary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    item.tags.forEach { tag ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(theme.surfaceVariant)
+                                .border(1.dp, theme.border, RoundedCornerShape(10.dp))
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "#${tag.tagName}",
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                                color = theme.inkPrimary
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+        }
     }
 
+    // Delete Confirmation Dialog
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete Entry", color = InkPrimary) },
-            text = { Text("Are you sure you want to remove '${entry.title}' from your journal?", color = InkSecondary) },
+            title = {
+                Text(
+                    text = "Delete Entry?",
+                    color = theme.inkPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete \"${entry.title}\"? This action cannot be undone.",
+                    color = theme.inkSecondary
+                )
+            },
             confirmButton = {
                 Button(
                     onClick = {
-                        onDelete()
                         showDeleteConfirm = false
+                        onDelete()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE57373))
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Delete")
+                    Text("Delete", color = StickerDieCutWhite)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Cancel", color = InkSecondary)
+                Button(
+                    onClick = { showDeleteConfirm = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = theme.surfaceVariant),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Cancel", color = theme.inkPrimary)
                 }
             },
-            containerColor = SoftBackground,
+            containerColor = theme.surface,
             shape = RoundedCornerShape(20.dp)
         )
     }
@@ -855,74 +1121,75 @@ private fun JournalDetailSheet(
 
 @Composable
 private fun EmptyJournalPrompt(onCaptureClick: () -> Unit) {
+    val theme = LocalNeumorphicTheme.current
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .neumorphicCard(cornerRadius = 24.dp, elevation = 6.dp)
-                .padding(32.dp)
+                .minimalistCard(cornerRadius = 24.dp, elevation = 1.dp)
+                .padding(32.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(68.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFFFF3E0)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Restaurant,
-                    contentDescription = null,
-                    tint = BiteyOrange,
-                    modifier = Modifier.size(36.dp)
-                )
-            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(BiteyOrange.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Restaurant,
+                        contentDescription = null,
+                        tint = BiteyOrange,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
-            Text(
-                text = "No Bites Recorded Yet",
-                style = MaterialTheme.typography.titleMedium,
-                color = InkPrimary
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Capture today's plate or pick from your gallery to create your first die-cut food sticker.",
-                style = MaterialTheme.typography.bodySmall,
-                color = InkSecondary,
-                modifier = Modifier.padding(horizontal = 12.dp)
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = onCaptureClick,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = BiteyOrange,
-                    contentColor = StickerDieCutWhite
-                ),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Capture First Bite",
-                    style = MaterialTheme.typography.labelLarge
+                    text = "No Bites Logged Yet",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = theme.inkPrimary
                 )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "Capture your meal to start creating die-cut stickers and tracking your culinary adventures.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = theme.inkSecondary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Button(
+                    onClick = onCaptureClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = BiteyOrange),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.height(44.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Add,
+                        contentDescription = null,
+                        tint = StickerDieCutWhite,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Capture First Bite",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                        color = StickerDieCutWhite
+                    )
+                }
             }
         }
     }
@@ -930,53 +1197,59 @@ private fun EmptyJournalPrompt(onCaptureClick: () -> Unit) {
 
 @Composable
 private fun NoSearchResultsPrompt(onClearFilters: () -> Unit) {
+    val theme = LocalNeumorphicTheme.current
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .neumorphicCard(cornerRadius = 24.dp, elevation = 6.dp)
-                .padding(32.dp)
+                .minimalistCard(cornerRadius = 24.dp, elevation = 1.dp)
+                .padding(28.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Rounded.Search,
-                contentDescription = null,
-                tint = InkMuted,
-                modifier = Modifier.size(48.dp)
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = null,
+                    tint = theme.inkMuted,
+                    modifier = Modifier.size(40.dp)
+                )
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-            Text(
-                text = "No Matching Bites",
-                style = MaterialTheme.typography.titleMedium,
-                color = InkPrimary
-            )
+                Text(
+                    text = "No Matching Bites",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = theme.inkPrimary
+                )
 
-            Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-            Text(
-                text = "Try adjusting your search terms or clearing active filters.",
-                style = MaterialTheme.typography.bodySmall,
-                color = InkSecondary
-            )
+                Text(
+                    text = "Try adjusting your search terms or meal type filters.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = theme.inkSecondary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
 
-            Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Button(
-                onClick = onClearFilters,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = BiteyOrange,
-                    contentColor = StickerDieCutWhite
-                ),
-                shape = RoundedCornerShape(14.dp)
-            ) {
-                Text("Clear Filters")
+                Button(
+                    onClick = onClearFilters,
+                    colors = ButtonDefaults.buttonColors(containerColor = theme.surfaceVariant),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "Reset Filters",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = theme.inkPrimary
+                    )
+                }
             }
         }
     }

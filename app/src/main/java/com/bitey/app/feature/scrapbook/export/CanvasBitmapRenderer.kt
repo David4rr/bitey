@@ -56,21 +56,6 @@ class CanvasBitmapRenderer @Inject constructor(
         }
         canvas.drawRect(0f, 0f, targetWidth.toFloat(), targetHeight.toFloat(), bgPaint)
 
-        // Draw subtle tactile dot grid
-        val dotPaint = Paint().apply {
-            color = 0x18000000
-            style = Paint.Style.FILL
-        }
-        val gridStep = 48f
-        var gx = gridStep
-        while (gx < targetWidth) {
-            var gy = gridStep
-            while (gy < targetHeight) {
-                canvas.drawCircle(gx, gy, 1.8f, dotPaint)
-                gy += gridStep
-            }
-            gx += gridStep
-        }
 
         // Scale factor from preview viewport coordinates to offscreen high-res canvas
         val scaleX = targetWidth / viewportWidthPx

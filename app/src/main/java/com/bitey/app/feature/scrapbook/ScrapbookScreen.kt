@@ -88,14 +88,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
-import com.bitey.app.core.ui.neumorphic.neumorphicCard
+import com.bitey.app.core.ui.neumorphic.minimalistCard
 import com.bitey.app.core.ui.theme.BiteyMint
 import com.bitey.app.core.ui.theme.BiteyOrange
-import com.bitey.app.core.ui.theme.InkMuted
-import com.bitey.app.core.ui.theme.InkPrimary
-import com.bitey.app.core.ui.theme.InkSecondary
-import com.bitey.app.core.ui.theme.NeumorphicSurface
-import com.bitey.app.core.ui.theme.SoftBackground
+import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.core.ui.theme.StickerDieCutWhite
 import com.bitey.app.feature.scrapbook.model.CanvasAspectRatio
 import com.bitey.app.feature.scrapbook.model.CanvasElement
@@ -121,6 +117,7 @@ fun ScrapbookScreen(
     val context = LocalContext.current
     val density = LocalDensity.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val theme = LocalNeumorphicTheme.current
 
     var showClearDialog by remember { mutableStateOf(false) }
     var viewportWidthPx by remember { mutableStateOf(1080f) }
@@ -136,7 +133,7 @@ fun ScrapbookScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SoftBackground)
+            .background(theme.background)
     ) {
         // Top Bar
         Row(
@@ -158,7 +155,7 @@ fun ScrapbookScreen(
                 Text(
                     text = "${uiState.elements.size} Elements • ${uiState.aspectRatio.label}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = InkSecondary
+                    color = theme.inkSecondary
                 )
             }
 
@@ -167,7 +164,7 @@ fun ScrapbookScreen(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(NeumorphicSurface)
+                        .background(theme.surfaceVariant)
                         .clickable {
                             val nextRatio = if (uiState.aspectRatio == CanvasAspectRatio.STORY_9_16) {
                                 CanvasAspectRatio.SQUARE_1_1
@@ -181,7 +178,7 @@ fun ScrapbookScreen(
                     Text(
                         text = if (uiState.aspectRatio == CanvasAspectRatio.STORY_9_16) "9:16" else "1:1",
                         style = MaterialTheme.typography.labelSmall,
-                        color = InkPrimary
+                        color = theme.inkPrimary
                     )
                 }
 
@@ -194,7 +191,7 @@ fun ScrapbookScreen(
                         Icon(
                             imageVector = Icons.Rounded.Delete,
                             contentDescription = "Clear Canvas",
-                            tint = InkMuted,
+                            tint = theme.inkMuted,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -215,7 +212,7 @@ fun ScrapbookScreen(
                     Icon(
                         imageVector = Icons.Rounded.Download,
                         contentDescription = "Save to Gallery",
-                        tint = if (uiState.elements.isNotEmpty()) BiteyOrange else InkMuted,
+                        tint = if (uiState.elements.isNotEmpty()) BiteyOrange else theme.inkMuted,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -248,7 +245,7 @@ fun ScrapbookScreen(
                     Icon(
                         imageVector = Icons.Rounded.Share,
                         contentDescription = "Share Story",
-                        tint = if (uiState.elements.isNotEmpty()) BiteyMint else InkMuted,
+                        tint = if (uiState.elements.isNotEmpty()) BiteyMint else theme.inkMuted,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -268,7 +265,7 @@ fun ScrapbookScreen(
             BoxWithConstraints(
                 modifier = Modifier
                     .aspectRatio(aspect)
-                    .neumorphicCard(cornerRadius = 24.dp, elevation = 8.dp)
+                    .minimalistCard(cornerRadius = 24.dp, elevation = 2.dp)
                     .clip(RoundedCornerShape(24.dp))
                     .background(Color(uiState.backgroundColorHex))
                     .pointerInput(Unit) {
@@ -281,23 +278,6 @@ fun ScrapbookScreen(
                 viewportWidthPx = with(density) { maxWidth.toPx() }
                 viewportHeightPx = with(density) { maxHeight.toPx() }
 
-                // Subtle Grid Dots Background
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val step = 32.dp.toPx()
-                    var x = step
-                    while (x < size.width) {
-                        var y = step
-                        while (y < size.height) {
-                            drawCircle(
-                                color = if (uiState.backgroundColorHex == 0xFF263238L) Color(0x22FFFFFF) else Color(0x18000000),
-                                radius = 1.2f,
-                                center = androidx.compose.ui.geometry.Offset(x, y)
-                            )
-                            y += step
-                        }
-                        x += step
-                    }
-                }
 
                 // Empty canvas prompt
                 if (uiState.elements.isEmpty()) {
@@ -308,13 +288,13 @@ fun ScrapbookScreen(
                         Text(
                             text = "Blank Story Canvas",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = if (uiState.backgroundColorHex == 0xFF263238L) StickerDieCutWhite else InkPrimary
+                            color = if (uiState.backgroundColorHex == 0xFF263238L) StickerDieCutWhite else theme.inkPrimary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Tap '+ Food Sticker' or '+ Accessory' below to craft your scrapbook.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (uiState.backgroundColorHex == 0xFF263238L) InkMuted else InkSecondary,
+                            color = if (uiState.backgroundColorHex == 0xFF263238L) theme.inkMuted else theme.inkSecondary,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -385,7 +365,7 @@ fun ScrapbookScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .neumorphicCard(cornerRadius = 22.dp, elevation = 6.dp)
+                    .minimalistCard(cornerRadius = 22.dp, elevation = 2.dp)
                     .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Row(
@@ -419,8 +399,8 @@ fun ScrapbookScreen(
                         Button(
                             onClick = { viewModel.openAccessorySheet(true) },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = NeumorphicSurface,
-                                contentColor = InkPrimary
+                                containerColor = theme.surfaceVariant,
+                                contentColor = theme.inkPrimary
                             ),
                             shape = RoundedCornerShape(14.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
@@ -477,7 +457,7 @@ fun ScrapbookScreen(
         ModalBottomSheet(
             onDismissRequest = { viewModel.openFoodStickerSheet(false) },
             sheetState = sheetState,
-            containerColor = SoftBackground,
+            containerColor = theme.surface,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
         ) {
             FoodStickerPickerSheet(
@@ -494,7 +474,7 @@ fun ScrapbookScreen(
         ModalBottomSheet(
             onDismissRequest = { viewModel.openAccessorySheet(false) },
             sheetState = sheetState,
-            containerColor = SoftBackground,
+            containerColor = theme.surface,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
         ) {
             AccessoryPickerSheet(
@@ -510,8 +490,8 @@ fun ScrapbookScreen(
     if (showClearDialog) {
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
-            title = { Text("Clear Story Canvas", color = InkPrimary) },
-            text = { Text("Remove all stickers and accessories from this canvas?", color = InkSecondary) },
+            title = { Text("Clear Story Canvas", color = theme.inkPrimary) },
+            text = { Text("Remove all stickers and accessories from this canvas?", color = theme.inkSecondary) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -526,12 +506,12 @@ fun ScrapbookScreen(
             dismissButton = {
                 Button(
                     onClick = { showClearDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = NeumorphicSurface, contentColor = InkPrimary)
+                    colors = ButtonDefaults.buttonColors(containerColor = theme.surfaceVariant, contentColor = theme.inkPrimary)
                 ) {
                     Text("Cancel")
                 }
             },
-            containerColor = SoftBackground,
+            containerColor = theme.surface,
             shape = RoundedCornerShape(20.dp)
         )
     }
@@ -608,7 +588,7 @@ private fun CanvasElementItem(element: CanvasElement) {
                 Text(
                     text = element.text ?: "Location",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = InkPrimary
+                    color = Color(0xFF1E293B)
                 )
             }
         }
@@ -693,6 +673,7 @@ private fun FoodStickerPickerSheet(
     onSelectSticker: (PlateEntryWithTags) -> Unit,
     onClose: () -> Unit
 ) {
+    val theme = LocalNeumorphicTheme.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -706,10 +687,10 @@ private fun FoodStickerPickerSheet(
             Text(
                 text = "Pick Food Sticker",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = InkPrimary
+                color = theme.inkPrimary
             )
             IconButton(onClick = onClose) {
-                Icon(Icons.Rounded.Close, contentDescription = "Close", tint = InkSecondary)
+                Icon(Icons.Rounded.Close, contentDescription = "Close", tint = theme.inkSecondary)
             }
         }
 
@@ -725,7 +706,7 @@ private fun FoodStickerPickerSheet(
                 Text(
                     text = "No bites recorded yet. Record a meal in the journal to unlock stickers.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = InkSecondary,
+                    color = theme.inkSecondary,
                     textAlign = TextAlign.Center
                 )
             }
@@ -743,7 +724,7 @@ private fun FoodStickerPickerSheet(
                     Box(
                         modifier = Modifier
                             .aspectRatio(1f)
-                            .neumorphicCard(cornerRadius = 16.dp, elevation = 4.dp)
+                            .minimalistCard(cornerRadius = 16.dp)
                             .clickable { onSelectSticker(item) }
                             .padding(8.dp),
                         contentAlignment = Alignment.Center
@@ -768,6 +749,7 @@ private fun AccessoryPickerSheet(
     onSelectAccessory: (CanvasElementType, String, String?, Long) -> Unit,
     onClose: () -> Unit
 ) {
+    val theme = LocalNeumorphicTheme.current
     val dateStr = SimpleDateFormat("EEEE • dd MMM yyyy", Locale.US).format(Date()).uppercase()
 
     Column(
@@ -783,10 +765,10 @@ private fun AccessoryPickerSheet(
             Text(
                 text = "Pick Decorative Accessory",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = InkPrimary
+                color = theme.inkPrimary
             )
             IconButton(onClick = onClose) {
-                Icon(Icons.Rounded.Close, contentDescription = "Close", tint = InkSecondary)
+                Icon(Icons.Rounded.Close, contentDescription = "Close", tint = theme.inkSecondary)
             }
         }
 
@@ -803,7 +785,7 @@ private fun AccessoryPickerSheet(
                 Text(
                     text = "DATE STAMPS",
                     style = MaterialTheme.typography.labelSmall,
-                    color = InkSecondary
+                    color = theme.inkSecondary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -829,7 +811,7 @@ private fun AccessoryPickerSheet(
                 Text(
                     text = "WASHI TAPE STRIPS",
                     style = MaterialTheme.typography.labelSmall,
-                    color = InkSecondary
+                    color = theme.inkSecondary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -857,7 +839,7 @@ private fun AccessoryPickerSheet(
                 Text(
                     text = "RATING & VERDICTS",
                     style = MaterialTheme.typography.labelSmall,
-                    color = InkSecondary
+                    color = theme.inkSecondary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -885,7 +867,7 @@ private fun AccessoryPickerSheet(
                 Text(
                     text = "MOOD CHIPS",
                     style = MaterialTheme.typography.labelSmall,
-                    color = InkSecondary
+                    color = theme.inkSecondary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -918,9 +900,10 @@ private fun AccessoryChip(
     colorHex: Long = 0xFFFF6B35,
     onClick: () -> Unit
 ) {
+    val theme = LocalNeumorphicTheme.current
     Box(
         modifier = Modifier
-            .neumorphicCard(cornerRadius = 14.dp, elevation = 4.dp)
+            .minimalistCard(cornerRadius = 14.dp)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
@@ -934,7 +917,7 @@ private fun AccessoryChip(
                 Text(
                     text = sub,
                     style = MaterialTheme.typography.labelSmall,
-                    color = InkSecondary
+                    color = theme.inkSecondary
                 )
             }
         }

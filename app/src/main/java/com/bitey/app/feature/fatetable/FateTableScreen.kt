@@ -87,14 +87,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
-import com.bitey.app.core.ui.neumorphic.neumorphicCard
+import com.bitey.app.core.ui.neumorphic.minimalistCard
 import com.bitey.app.core.ui.theme.BiteyMint
 import com.bitey.app.core.ui.theme.BiteyOrange
-import com.bitey.app.core.ui.theme.InkMuted
-import com.bitey.app.core.ui.theme.InkPrimary
-import com.bitey.app.core.ui.theme.InkSecondary
-import com.bitey.app.core.ui.theme.NeumorphicSurface
-import com.bitey.app.core.ui.theme.SoftBackground
+import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.core.ui.theme.StickerDieCutWhite
 import kotlinx.coroutines.launch
 import java.io.File
@@ -122,6 +118,7 @@ fun FateTableScreen(
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val theme = LocalNeumorphicTheme.current
 
     val rotationAnimatable = remember { Animatable(uiState.currentRotationAngle) }
     var lastHapticSliceIndex by remember { mutableIntStateOf(-1) }
@@ -143,7 +140,7 @@ fun FateTableScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SoftBackground)
+            .background(theme.background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -168,7 +165,7 @@ fun FateTableScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFFFF3E0))
+                            .background(BiteyOrange.copy(alpha = 0.12f))
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
@@ -181,7 +178,7 @@ fun FateTableScreen(
                 Text(
                     text = "Dining dilemma? Let serendipity choose your bite",
                     style = MaterialTheme.typography.bodySmall,
-                    color = InkSecondary
+                    color = theme.inkSecondary
                 )
             }
 
@@ -190,7 +187,7 @@ fun FateTableScreen(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .neumorphicCard(cornerRadius = 20.dp),
+                        .minimalistCard(cornerRadius = 20.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     IconButton(
@@ -200,7 +197,7 @@ fun FateTableScreen(
                         Icon(
                             imageVector = Icons.Rounded.Shuffle,
                             contentDescription = "Shuffle Candidates",
-                            tint = if (uiState.isSpinning) InkMuted else InkPrimary,
+                            tint = if (uiState.isSpinning) theme.inkMuted else theme.inkPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -285,7 +282,7 @@ fun FateTableScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .neumorphicCard(cornerRadius = 180.dp, elevation = 10.dp)
+                        .minimalistCard(cornerRadius = 180.dp)
                 )
 
                 // Rotating Wheel Canvas
@@ -499,12 +496,13 @@ private fun WheelPointerIndicator(modifier: Modifier = Modifier) {
 
 @Composable
 private fun CenterHubCap() {
+    val theme = LocalNeumorphicTheme.current
     Box(
         modifier = Modifier
             .size(54.dp)
             .clip(CircleShape)
-            .background(SoftBackground)
-            .neumorphicCard(cornerRadius = 27.dp, elevation = 4.dp),
+            .background(theme.surface)
+            .minimalistCard(cornerRadius = 27.dp, elevation = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
@@ -530,6 +528,7 @@ private fun WinningDishDialog(
     onDismiss: () -> Unit,
     onNavigate: () -> Unit
 ) {
+    val theme = LocalNeumorphicTheme.current
     val entry = entryWithTags.entry
     val imageFile = File(if (entry.isStickerMode && entry.stickerImagePath != null) entry.stickerImagePath else entry.fullImagePath)
 
@@ -562,8 +561,8 @@ private fun WinningDishDialog(
             Button(
                 onClick = onDismiss,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = NeumorphicSurface,
-                    contentColor = InkPrimary
+                    containerColor = theme.surfaceVariant,
+                    contentColor = theme.inkPrimary
                 ),
                 shape = RoundedCornerShape(14.dp)
             ) {
@@ -581,7 +580,7 @@ private fun WinningDishDialog(
                 Text(
                     text = "Your next meal has been chosen",
                     style = MaterialTheme.typography.bodySmall,
-                    color = InkSecondary,
+                    color = theme.inkSecondary,
                     textAlign = TextAlign.Center
                 )
             }
@@ -598,7 +597,7 @@ private fun WinningDishDialog(
                     modifier = Modifier
                         .size(160.dp)
                         .aspectRatio(1f)
-                        .neumorphicCard(cornerRadius = 24.dp, elevation = 6.dp)
+                        .minimalistCard(cornerRadius = 24.dp, elevation = 2.dp)
                         .padding(12.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -628,7 +627,7 @@ private fun WinningDishDialog(
                 Text(
                     text = entry.title,
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = InkPrimary,
+                    color = theme.inkPrimary,
                     textAlign = TextAlign.Center
                 )
 
@@ -649,14 +648,14 @@ private fun WinningDishDialog(
                     Text(
                         text = String.format(Locale.US, "%.1f", entry.rating),
                         style = MaterialTheme.typography.labelMedium,
-                        color = InkPrimary
+                        color = theme.inkPrimary
                     )
 
                     Spacer(modifier = Modifier.width(12.dp))
 
                     Text(
                         text = "•",
-                        color = InkMuted
+                        color = theme.inkMuted
                     )
 
                     Spacer(modifier = Modifier.width(12.dp))
@@ -677,14 +676,14 @@ private fun WinningDishDialog(
                         Icon(
                             imageVector = Icons.Rounded.LocationOn,
                             contentDescription = null,
-                            tint = InkMuted,
+                            tint = theme.inkMuted,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = loc,
                             style = MaterialTheme.typography.bodySmall,
-                            color = InkSecondary,
+                            color = theme.inkSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -696,13 +695,13 @@ private fun WinningDishDialog(
                     Text(
                         text = "\"$note\"",
                         style = MaterialTheme.typography.bodySmall,
-                        color = InkMuted,
+                        color = theme.inkMuted,
                         textAlign = TextAlign.Center
                     )
                 }
             }
         },
-        containerColor = SoftBackground,
+        containerColor = theme.surface,
         shape = RoundedCornerShape(24.dp)
     )
 }
@@ -714,17 +713,18 @@ private fun FateFilterPill(
     onClick: () -> Unit,
     enabled: Boolean
 ) {
+    val theme = LocalNeumorphicTheme.current
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) BiteyOrange else NeumorphicSurface)
+            .background(if (isSelected) BiteyOrange else theme.surfaceVariant)
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
-            color = if (isSelected) StickerDieCutWhite else if (enabled) InkSecondary else InkMuted
+            color = if (isSelected) StickerDieCutWhite else if (enabled) theme.inkSecondary else theme.inkMuted
         )
     }
 }
@@ -735,6 +735,7 @@ private fun InsufficientCandidatesPrompt(
     onCaptureClick: () -> Unit,
     onResetFilters: () -> Unit
 ) {
+    val theme = LocalNeumorphicTheme.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -745,14 +746,14 @@ private fun InsufficientCandidatesPrompt(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .fillMaxWidth()
-                .neumorphicCard(cornerRadius = 24.dp, elevation = 6.dp)
+                .minimalistCard(cornerRadius = 24.dp, elevation = 2.dp)
                 .padding(32.dp)
         ) {
             Box(
                 modifier = Modifier
                     .size(64.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFFFF3E0)),
+                    .background(BiteyOrange.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -768,7 +769,7 @@ private fun InsufficientCandidatesPrompt(
             Text(
                 text = if (totalEntriesCount < 2) "Wheel of Serendipity" else "Need More Options",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = InkPrimary
+                color = theme.inkPrimary
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -780,7 +781,7 @@ private fun InsufficientCandidatesPrompt(
                     "The current filter has fewer than 2 candidates. Switch to 'All Recorded' or clear tag filters."
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = InkSecondary,
+                color = theme.inkSecondary,
                 textAlign = TextAlign.Center
             )
 

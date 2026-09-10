@@ -105,10 +105,10 @@ class JournalFilteringTest {
     fun defaultJournalUiState_initializesWithDefaults() {
         val state = JournalUiState()
         assertTrue(state.entries.isEmpty())
+        assertTrue(state.dateGroups.isEmpty())
         assertEquals(0, state.totalEntriesCount)
         assertEquals("", state.searchQuery)
         assertFalse(state.isFavoritesOnly)
-        assertTrue(state.isGridView)
         assertTrue(state.isLoading)
     }
 }

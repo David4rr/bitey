@@ -75,15 +75,11 @@ import coil.compose.AsyncImage
 import com.bitey.app.core.image.CompositedSticker
 import com.bitey.app.core.image.ProcessedImage
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
-import com.bitey.app.core.ui.neumorphic.neumorphicCard
+import com.bitey.app.core.ui.neumorphic.minimalistCard
 import com.bitey.app.core.ui.theme.BiteyMint
 import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.BiteyWarmYellow
-import com.bitey.app.core.ui.theme.InkMuted
-import com.bitey.app.core.ui.theme.InkPrimary
-import com.bitey.app.core.ui.theme.InkSecondary
-import com.bitey.app.core.ui.theme.NeumorphicSurface
-import com.bitey.app.core.ui.theme.SoftBackground
+import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.core.ui.theme.StickerDieCutWhite
 import com.bitey.app.feature.camera.CameraViewfinder
 import java.text.SimpleDateFormat
@@ -98,6 +94,7 @@ fun NewEntryScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val theme = LocalNeumorphicTheme.current
 
     // Modern Photo Picker launcher (Permissionless on Android 13+)
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -108,11 +105,12 @@ fun NewEntryScreen(
         }
     }
 
-    // Camera permission launcher
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
+    // Camera & Location permission launcher
+    val permissionsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val cameraGranted = permissions[Manifest.permission.CAMERA] == true
+        if (cameraGranted) {
             viewModel.openCamera()
         } else {
             Toast.makeText(
@@ -124,15 +122,34 @@ fun NewEntryScreen(
     }
 
     fun handleCameraClick() {
-        val hasPermission = ContextCompat.checkSelfPermission(
+        val hasCamera = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.CAMERA
         ) == PackageManager.PERMISSION_GRANTED
 
-        if (hasPermission) {
+        val hasLocation = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasCamera) {
+            if (!hasLocation) {
+                permissionsLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                )
+            }
             viewModel.openCamera()
         } else {
-            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            permissionsLauncher.launch(
+                arrayOf(
+                    Manifest.permission.CAMERA,
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
         }
     }
 
@@ -149,7 +166,7 @@ fun NewEntryScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(SoftBackground)
+                .background(theme.background)
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
@@ -161,14 +178,14 @@ fun NewEntryScreen(
                 Box(
                     modifier = Modifier
                         .size(42.dp)
-                        .neumorphicCard(cornerRadius = 21.dp),
+                        .minimalistCard(cornerRadius = 21.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                             contentDescription = "Back",
-                            tint = InkPrimary
+                            tint = theme.inkPrimary
                         )
                     }
                 }
@@ -189,12 +206,12 @@ fun NewEntryScreen(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleLarge,
-                        color = InkPrimary
+                        color = theme.inkPrimary
                     )
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = InkSecondary
+                        color = theme.inkSecondary
                     )
                 }
             }
@@ -304,10 +321,11 @@ private fun ProcessingCard(
     title: String,
     status: String
 ) {
+    val theme = LocalNeumorphicTheme.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .neumorphicCard(cornerRadius = 24.dp, elevation = 6.dp)
+            .minimalistCard(cornerRadius = 24.dp, elevation = 2.dp)
             .padding(40.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -323,13 +341,13 @@ private fun ProcessingCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = InkPrimary
+                color = theme.inkPrimary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = status,
                 style = MaterialTheme.typography.bodySmall,
-                color = InkSecondary
+                color = theme.inkSecondary
             )
         }
     }
@@ -340,10 +358,11 @@ private fun AcquisitionOptionsCard(
     onPickFromGallery: () -> Unit,
     onCaptureLivePhoto: () -> Unit
 ) {
+    val theme = LocalNeumorphicTheme.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .neumorphicCard(cornerRadius = 24.dp, elevation = 6.dp)
+            .minimalistCard(cornerRadius = 24.dp, elevation = 2.dp)
             .padding(24.dp)
     ) {
         Column(
@@ -353,13 +372,13 @@ private fun AcquisitionOptionsCard(
             Text(
                 text = "How would you like to add your food?",
                 style = MaterialTheme.typography.titleMedium,
-                color = InkPrimary
+                color = theme.inkPrimary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Device album does not require camera access",
                 style = MaterialTheme.typography.bodySmall,
-                color = InkMuted
+                color = theme.inkMuted
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -408,7 +427,7 @@ private fun AcquisitionOptionsCard(
                 Text(
                     text = "Take a Live Photo",
                     style = MaterialTheme.typography.labelLarge,
-                    color = InkPrimary
+                    color = theme.inkPrimary
                 )
             }
         }
@@ -423,6 +442,7 @@ private fun ImagePreviewCard(
     onContinueWithoutSticker: () -> Unit,
     onRetake: () -> Unit
 ) {
+    val theme = LocalNeumorphicTheme.current
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -431,7 +451,7 @@ private fun ImagePreviewCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .neumorphicCard(cornerRadius = 24.dp, elevation = 6.dp)
+                .minimalistCard(cornerRadius = 24.dp, elevation = 2.dp)
                 .padding(12.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -451,7 +471,7 @@ private fun ImagePreviewCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .neumorphicCard(cornerRadius = 20.dp, elevation = 4.dp)
+                .minimalistCard(cornerRadius = 20.dp, elevation = 1.dp)
                 .padding(16.dp)
         ) {
             Column(
@@ -470,7 +490,7 @@ private fun ImagePreviewCard(
                     Text(
                         text = "Memory & EXIF Extracted",
                         style = MaterialTheme.typography.titleSmall,
-                        color = InkPrimary
+                        color = theme.inkPrimary
                     )
                 }
 
@@ -498,7 +518,7 @@ private fun ImagePreviewCard(
                         processedImage.exifMetadata.longitude
                     )
                 } else {
-                    "No GPS in file (will use location in Phase 4)"
+                    "Location pinned upon capture"
                 }
 
                 MetadataRow(
@@ -561,14 +581,14 @@ private fun ImagePreviewCard(
                 Icon(
                     imageVector = Icons.Rounded.Crop,
                     contentDescription = null,
-                    tint = InkSecondary,
+                    tint = theme.inkSecondary,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Crop Styles",
                     style = MaterialTheme.typography.labelMedium,
-                    color = InkPrimary
+                    color = theme.inkPrimary
                 )
             }
 
@@ -582,14 +602,14 @@ private fun ImagePreviewCard(
                 Icon(
                     imageVector = Icons.Rounded.Refresh,
                     contentDescription = null,
-                    tint = InkSecondary,
+                    tint = theme.inkSecondary,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "New Photo",
                     style = MaterialTheme.typography.labelMedium,
-                    color = InkPrimary
+                    color = theme.inkPrimary
                 )
             }
         }
@@ -602,7 +622,7 @@ private fun ImagePreviewCard(
             Text(
                 text = "Skip sticker & continue with original photo",
                 style = MaterialTheme.typography.bodySmall,
-                color = InkSecondary
+                color = theme.inkSecondary
             )
         }
     }
@@ -616,6 +636,7 @@ private fun StickerReviewCard(
     onChangeStyle: () -> Unit,
     onContinue: () -> Unit
 ) {
+    val theme = LocalNeumorphicTheme.current
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Column(
@@ -624,7 +645,7 @@ private fun StickerReviewCard(
         // Tab row to toggle between Sticker and Original Photo
         TabRow(
             selectedTabIndex = selectedTab,
-            containerColor = SoftBackground,
+            containerColor = theme.surfaceVariant,
             contentColor = BiteyOrange,
             indicator = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
@@ -676,7 +697,7 @@ private fun StickerReviewCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .neumorphicCard(cornerRadius = 24.dp, elevation = 6.dp)
+                .minimalistCard(cornerRadius = 24.dp, elevation = 2.dp)
                 .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -709,7 +730,7 @@ private fun StickerReviewCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .neumorphicCard(cornerRadius = 20.dp, elevation = 4.dp)
+                .minimalistCard(cornerRadius = 20.dp, elevation = 1.dp)
                 .padding(16.dp)
         ) {
             Column(
@@ -731,14 +752,14 @@ private fun StickerReviewCard(
                         Text(
                             text = "Sticker Style",
                             style = MaterialTheme.typography.titleSmall,
-                            color = InkPrimary
+                            color = theme.inkPrimary
                         )
                     }
 
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFFFF3E0))
+                            .background(BiteyOrange.copy(alpha = 0.12f))
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
@@ -800,14 +821,14 @@ private fun StickerReviewCard(
             Icon(
                 imageVector = Icons.Rounded.Tune,
                 contentDescription = null,
-                tint = InkSecondary,
+                tint = theme.inkSecondary,
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "Change Sticker Style or Crop",
                 style = MaterialTheme.typography.labelLarge,
-                color = InkPrimary
+                color = theme.inkPrimary
             )
         }
     }
@@ -818,13 +839,14 @@ private fun FallbackStyleDialog(
     onDismiss: () -> Unit,
     onSelectStyle: (StickerStyle) -> Unit
 ) {
+    val theme = LocalNeumorphicTheme.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
                 text = "Select Sticker Style",
                 style = MaterialTheme.typography.titleMedium,
-                color = InkPrimary
+                color = theme.inkPrimary
             )
         },
         text = {
@@ -832,7 +854,7 @@ private fun FallbackStyleDialog(
                 Text(
                     text = "Choose how your food is clipped into a die-cut sticker:",
                     style = MaterialTheme.typography.bodySmall,
-                    color = InkSecondary
+                    color = theme.inkSecondary
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -862,10 +884,10 @@ private fun FallbackStyleDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = InkSecondary)
+                Text("Cancel", color = theme.inkSecondary)
             }
         },
-        containerColor = SoftBackground,
+        containerColor = theme.surface,
         shape = RoundedCornerShape(24.dp)
     )
 }
@@ -876,11 +898,12 @@ private fun StyleOptionItem(
     subtitle: String,
     onClick: () -> Unit
 ) {
+    val theme = LocalNeumorphicTheme.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(NeumorphicSurface)
+            .background(theme.surfaceVariant)
             .clickable(onClick = onClick)
             .padding(14.dp)
     ) {
@@ -888,13 +911,13 @@ private fun StyleOptionItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
-                color = InkPrimary
+                color = theme.inkPrimary
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = InkMuted
+                color = theme.inkMuted
             )
         }
     }
@@ -906,6 +929,7 @@ private fun MetadataRow(
     title: String,
     value: String
 ) {
+    val theme = LocalNeumorphicTheme.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth()
@@ -913,19 +937,19 @@ private fun MetadataRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = InkMuted,
+            tint = theme.inkMuted,
             modifier = Modifier.size(16.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "$title: ",
             style = MaterialTheme.typography.bodySmall,
-            color = InkSecondary
+            color = theme.inkSecondary
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
-            color = InkPrimary
+            color = theme.inkPrimary
         )
     }
 }

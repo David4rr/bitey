@@ -156,6 +156,11 @@ class EntryEditorViewModel @Inject constructor(
         _uiState.update { it.copy(isFavorite = !it.isFavorite) }
     }
 
+
+    fun updateTimestamp(timestamp: Long) {
+        val inferredMeal = MealType.fromTimestamp(timestamp)
+        _uiState.update { it.copy(timestamp = timestamp, mealType = inferredMeal) }
+    }
     fun toggleStickerMode() {
         _uiState.update { it.copy(isStickerMode = !it.isStickerMode) }
     }

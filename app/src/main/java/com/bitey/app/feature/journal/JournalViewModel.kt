@@ -87,9 +87,16 @@ class JournalViewModel @Inject constructor(
 
             true
         }
+        // Group entries chronologically by calendar date
+        val dateGroups = filtered
+            .groupBy { item -> formatDateHeader(item.entry.timestamp) }
+            .map { (dateLabel, groupEntries) ->
+                DateGroup(dateLabel = dateLabel, entries = groupEntries)
+            }
 
         JournalUiState(
             entries = filtered,
+            dateGroups = dateGroups,
             totalEntriesCount = allEntries.size,
             searchQuery = filters.query,
             isFavoritesOnly = filters.isFavoritesOnly,
@@ -105,6 +112,31 @@ class JournalViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000L),
         initialValue = JournalUiState()
     )
+
+    private fun formatDateHeader(timestamp: Long): String {
+        val entryCal = java.util.Calendar.getInstance().apply { timeInMillis = timestamp }
+        val todayCal = java.util.Calendar.getInstance()
+        val isToday = entryCal.get(java.util.Calendar.YEAR) == todayCal.get(java.util.Calendar.YEAR) &&
+                entryCal.get(java.util.Calendar.DAY_OF_YEAR) == todayCal.get(java.util.Calendar.DAY_OF_YEAR)
+
+        val yesterdayCal = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -1) }
+        val isYesterday = entryCal.get(java.util.Calendar.YEAR) == yesterdayCal.get(java.util.Calendar.YEAR) &&
+                entryCal.get(java.util.Calendar.DAY_OF_YEAR) == yesterdayCal.get(java.util.Calendar.DAY_OF_YEAR)
+
+        return when {
+            isToday -> {
+                val dayStr = java.text.SimpleDateFormat("dd MMMM", java.util.Locale.US).format(java.util.Date(timestamp))
+                "Today • $dayStr"
+            }
+            isYesterday -> {
+                val dayStr = java.text.SimpleDateFormat("dd MMMM", java.util.Locale.US).format(java.util.Date(timestamp))
+                "Yesterday • $dayStr"
+            }
+            else -> {
+                java.text.SimpleDateFormat("EEEE, dd MMMM yyyy", java.util.Locale.US).format(java.util.Date(timestamp))
+            }
+        }
+    }
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query

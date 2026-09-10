@@ -25,6 +25,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,11 +45,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FlashAuto
 import androidx.compose.material.icons.rounded.FlashOff
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.FlipCameraAndroid
+import androidx.compose.material.icons.rounded.PhotoLibrary
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -78,7 +82,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.bitey.app.core.ui.neumorphic.neumorphicRaised
 import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.BiteyWarmYellow
-import com.bitey.app.core.ui.theme.InkPrimary
 import com.bitey.app.core.ui.theme.StickerDieCutWhite
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -95,10 +98,17 @@ enum class CameraRatio(val label: String, val ratioFloat: Float) {
     STANDARD_4_3("4:3", 3.0f / 4.0f)
 }
 
+enum class PhotoMode(val label: String) {
+    WHOLE_DISH("Whole Dish"),
+    PER_DISH("Per Dish")
+}
+
 @Composable
 fun CameraViewfinder(
     onPhotoCaptured: (File) -> Unit,
     onClose: () -> Unit,
+    onPickFromFile: (() -> Unit)? = null,
+    onPhotoCapturedWithConfig: ((File, PhotoMode, Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -110,7 +120,8 @@ fun CameraViewfinder(
     var flashMode by remember { mutableIntStateOf(ImageCapture.FLASH_MODE_OFF) }
     var lensFacing by remember { mutableStateOf(CameraSelector.DEFAULT_BACK_CAMERA) }
     var isCapturing by remember { mutableStateOf(false) }
-
+    var photoMode by remember { mutableStateOf(PhotoMode.WHOLE_DISH) }
+    var keepOriginal by remember { mutableStateOf(true) }
     // Tap-to-focus state
     var focusPoint by remember { mutableStateOf<Pair<Float, Float>?>(null) }
     var showFocusRing by remember { mutableStateOf(false) }
@@ -178,15 +189,14 @@ fun CameraViewfinder(
                 }
             )
 
-            // Aspect Ratio Dimmer / Framing Guide
-            if (selectedRatio == CameraRatio.SQUARE_1_1) {
-                // Dim top and bottom regions to frame 1:1 square in center
-                val boxWidthPx = with(density) { maxWidth.toPx() }
-                val boxHeightPx = with(density) { maxHeight.toPx() }
-                val squareSidePx = min(boxWidthPx, boxHeightPx)
-                val squareSideDp = with(density) { squareSidePx.toDp() }
-                val verticalMarginDp = (maxHeight - squareSideDp) / 2
+            // Aspect Ratio Dimmer / Framing Guide & Grid Overlay
+            val boxWidthPx = with(density) { maxWidth.toPx() }
+            val boxHeightPx = with(density) { maxHeight.toPx() }
+            val squareSidePx = min(boxWidthPx, boxHeightPx)
+            val squareSideDp = with(density) { squareSidePx.toDp() }
+            val verticalMarginDp = (maxHeight - squareSideDp) / 2
 
+            if (selectedRatio == CameraRatio.SQUARE_1_1) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     // Top Dimmer
                     Box(
@@ -334,48 +344,132 @@ fun CameraViewfinder(
                 }
             }
 
-            // Flash Mode Toggle
-            IconButton(
-                onClick = {
-                    flashMode = when (flashMode) {
-                        ImageCapture.FLASH_MODE_OFF -> ImageCapture.FLASH_MODE_ON
-                        ImageCapture.FLASH_MODE_ON -> ImageCapture.FLASH_MODE_AUTO
-                        else -> ImageCapture.FLASH_MODE_OFF
-                    }
-                },
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.5f))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                val flashIcon = when (flashMode) {
-                    ImageCapture.FLASH_MODE_ON -> Icons.Rounded.FlashOn
-                    ImageCapture.FLASH_MODE_AUTO -> Icons.Rounded.FlashAuto
-                    else -> Icons.Rounded.FlashOff
+
+                // Flash Mode Toggle
+                IconButton(
+                    onClick = {
+                        flashMode = when (flashMode) {
+                            ImageCapture.FLASH_MODE_OFF -> ImageCapture.FLASH_MODE_ON
+                            ImageCapture.FLASH_MODE_ON -> ImageCapture.FLASH_MODE_AUTO
+                            else -> ImageCapture.FLASH_MODE_OFF
+                        }
+                    },
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                ) {
+                    val flashIcon = when (flashMode) {
+                        ImageCapture.FLASH_MODE_ON -> Icons.Rounded.FlashOn
+                        ImageCapture.FLASH_MODE_AUTO -> Icons.Rounded.FlashAuto
+                        else -> Icons.Rounded.FlashOff
+                    }
+                    Icon(
+                        imageVector = flashIcon,
+                        contentDescription = "Toggle Flash",
+                        tint = if (flashMode != ImageCapture.FLASH_MODE_OFF) BiteyWarmYellow else StickerDieCutWhite
+                    )
                 }
-                Icon(
-                    imageVector = flashIcon,
-                    contentDescription = "Toggle Flash",
-                    tint = if (flashMode != ImageCapture.FLASH_MODE_OFF) BiteyWarmYellow else StickerDieCutWhite
-                )
             }
         }
 
-        // Bottom Capture Controls Bar
-        Box(
+        // Bottom Capture Controls & Options Area
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .background(Color.Black.copy(alpha = 0.75f))
-                .padding(horizontal = 24.dp, vertical = 28.dp)
+                .background(Color.Black.copy(alpha = 0.8f))
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Photo Modes (Whole Dish vs Per Dish) & Keep Original Toggle Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Photo Mode Selector
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color.White.copy(alpha = 0.15f))
+                        .padding(3.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    PhotoMode.entries.forEach { mode ->
+                        val isSelected = photoMode == mode
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(15.dp))
+                                .background(if (isSelected) BiteyOrange else Color.Transparent)
+                                .clickable { photoMode = mode }
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = mode.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (isSelected) StickerDieCutWhite else Color.White.copy(alpha = 0.75f)
+                            )
+                        }
+                    }
+                }
+
+                // Keep Original Photo Toggle
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(if (keepOriginal) BiteyOrange.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.12f))
+                        .clickable { keepOriginal = !keepOriginal }
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Save,
+                        contentDescription = null,
+                        tint = if (keepOriginal) BiteyOrange else Color.White.copy(alpha = 0.6f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = if (keepOriginal) "Keep Orig" else "Sticker Only",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (keepOriginal) Color.White else Color.White.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            // Capture Bar: Gallery Picker | Shutter Button | Camera Flip
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.size(48.dp))
-
+                // Pick from File / Gallery Option
+                if (onPickFromFile != null) {
+                    IconButton(
+                        onClick = onPickFromFile,
+                        modifier = Modifier
+                            .size(50.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.PhotoLibrary,
+                            contentDescription = "Pick from device files",
+                            tint = StickerDieCutWhite,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.size(50.dp))
+                }
                 // Tactile Shutter Button
                 Box(
                     modifier = Modifier
@@ -420,11 +514,14 @@ fun CameraViewfinder(
                                                         }
                                                         withContext(Dispatchers.Main) {
                                                             isCapturing = false
-                                                            onPhotoCaptured(finalFile)
+                                                            if (onPhotoCapturedWithConfig != null) {
+                                                                onPhotoCapturedWithConfig(finalFile, photoMode, keepOriginal)
+                                                            } else {
+                                                                onPhotoCaptured(finalFile)
+                                                            }
                                                         }
                                                     }
                                                 }
-
                                                 override fun onError(exception: ImageCaptureException) {
                                                     Log.e("CameraViewfinder", "Capture error: ${exception.message}", exception)
                                                     isCapturing = false
@@ -461,6 +558,7 @@ fun CameraViewfinder(
         }
     }
 }
+
 
 private fun cropFileToSquare(sourceFile: File): File {
     return try {

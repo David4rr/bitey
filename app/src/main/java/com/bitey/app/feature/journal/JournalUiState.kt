@@ -4,8 +4,14 @@ import com.bitey.app.core.database.model.MealType
 import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.database.model.TagEntity
 
+data class DateGroup(
+    val dateLabel: String,
+    val entries: List<PlateEntryWithTags>
+)
+
 data class JournalUiState(
     val entries: List<PlateEntryWithTags> = emptyList(),
+    val dateGroups: List<DateGroup> = emptyList(),
     val totalEntriesCount: Int = 0,
     val searchQuery: String = "",
     val isFavoritesOnly: Boolean = false,
