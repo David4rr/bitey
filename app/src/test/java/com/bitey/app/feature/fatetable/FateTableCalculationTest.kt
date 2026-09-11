@@ -28,7 +28,7 @@ class FateTableCalculationTest {
             rating = 4.8f,
             isFavorite = true,
             timestamp = System.currentTimeMillis() - 2 * 24 * 60 * 60 * 1000L, // 2 days ago
-            mealType = MealType.LUNCH
+            mealType = MealType.FOOD
         ),
         tags = listOf(sampleTags[0])
     )
@@ -43,7 +43,7 @@ class FateTableCalculationTest {
             rating = 4.9f,
             isFavorite = false,
             timestamp = System.currentTimeMillis() - 5 * 24 * 60 * 60 * 1000L, // 5 days ago
-            mealType = MealType.LATE_NIGHT
+            mealType = MealType.OTHER
         ),
         tags = listOf(sampleTags[1])
     )
@@ -58,7 +58,7 @@ class FateTableCalculationTest {
             rating = 4.2f,
             isFavorite = true,
             timestamp = System.currentTimeMillis() - 40 * 24 * 60 * 60 * 1000L, // 40 days ago (older than 30 days)
-            mealType = MealType.BREAKFAST
+            mealType = MealType.FOOD
         ),
         tags = emptyList()
     )

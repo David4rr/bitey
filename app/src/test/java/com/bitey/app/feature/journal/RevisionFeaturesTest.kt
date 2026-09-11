@@ -24,28 +24,16 @@ class RevisionFeaturesTest {
 
     @Test
     fun photoMode_allVariantsConfigured() {
-        assertEquals("Whole Dish", PhotoMode.WHOLE_DISH.label)
-        assertEquals("Per Dish", PhotoMode.PER_DISH.label)
+        assertEquals("Oneshot", PhotoMode.ONESHOT.label)
+        assertEquals("Dish by dish", PhotoMode.DISH_BY_DISH.label)
     }
 
     @Test
-    fun mealType_inferFromTimestampCorrectly() {
-        val cal = Calendar.getInstance()
-
-        cal.set(Calendar.HOUR_OF_DAY, 8)
-        assertEquals(MealType.BREAKFAST, MealType.fromTimestamp(cal.timeInMillis))
-
-        cal.set(Calendar.HOUR_OF_DAY, 12)
-        assertEquals(MealType.LUNCH, MealType.fromTimestamp(cal.timeInMillis))
-
-        cal.set(Calendar.HOUR_OF_DAY, 16)
-        assertEquals(MealType.SNACK, MealType.fromTimestamp(cal.timeInMillis))
-
-        cal.set(Calendar.HOUR_OF_DAY, 19)
-        assertEquals(MealType.DINNER, MealType.fromTimestamp(cal.timeInMillis))
-
-        cal.set(Calendar.HOUR_OF_DAY, 23)
-        assertEquals(MealType.LATE_NIGHT, MealType.fromTimestamp(cal.timeInMillis))
+    fun mealType_allVariantsConfigured() {
+        assertEquals("Food", MealType.FOOD.label)
+        assertEquals("Drink", MealType.DRINK.label)
+        assertEquals("Other", MealType.OTHER.label)
+        assertEquals(MealType.FOOD, MealType.fromTimestamp())
     }
 
     @Test

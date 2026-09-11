@@ -14,7 +14,7 @@ class BiteyTypeConverters {
         return try {
             MealType.valueOf(value)
         } catch (e: IllegalArgumentException) {
-            MealType.LUNCH
+            MealType.FOOD
         }
     }
 }

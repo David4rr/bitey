@@ -27,7 +27,7 @@ class JournalFilteringTest {
             rating = 4.5f,
             isFavorite = true,
             locationName = "Menteng, Jakarta Pusat",
-            mealType = MealType.DINNER
+            mealType = MealType.FOOD
         ),
         tags = listOf(sampleTags[0], sampleTags[1]) // Spicy, Street Food
     )
@@ -42,7 +42,7 @@ class JournalFilteringTest {
             rating = 5.0f,
             isFavorite = false,
             locationName = "Senopati, Jakarta Selatan",
-            mealType = MealType.SNACK
+            mealType = MealType.DRINK
         ),
         tags = listOf(sampleTags[2]) // Sweet
     )
@@ -58,12 +58,12 @@ class JournalFilteringTest {
 
     @Test
     fun filterByMealType_returnsMatchingMealType() {
-        val filteredDinner = allEntries.filter { it.entry.mealType == MealType.DINNER }
-        assertEquals(1, filteredDinner.size)
-        assertEquals("Nasi Goreng Gila", filteredDinner.first().entry.title)
+        val filteredFood = allEntries.filter { it.entry.mealType == MealType.FOOD }
+        assertEquals(1, filteredFood.size)
+        assertEquals("Nasi Goreng Gila", filteredFood.first().entry.title)
 
-        val filteredBreakfast = allEntries.filter { it.entry.mealType == MealType.BREAKFAST }
-        assertTrue(filteredBreakfast.isEmpty())
+        val filteredOther = allEntries.filter { it.entry.mealType == MealType.OTHER }
+        assertTrue(filteredOther.isEmpty())
     }
 
     @Test

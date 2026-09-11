@@ -65,19 +65,7 @@ fun BiteyApp() {
     // Live Camera Preview Bottom Sheet Dialog
     if (showCameraSheet) {
         CameraCaptureBottomSheet(
-            onDismissRequest = { showCameraSheet = false },
-            onEntryCapturedAndPinned = { _, imagePath, stickerPath, timestamp, lat, lng ->
-                showCameraSheet = false
-                navController.navigate(
-                    Screen.EntryEditor.createRoute(
-                        imagePath = imagePath,
-                        stickerPath = stickerPath,
-                        timestamp = timestamp,
-                        latitude = lat,
-                        longitude = lng
-                    )
-                )
-            }
+            onDismissRequest = { showCameraSheet = false }
         )
     }
 }

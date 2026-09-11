@@ -61,6 +61,7 @@ class EntryEditorViewModel @Inject constructor(
                 isStickerMode = decodedStickerPath != null,
                 timestamp = passedTimestamp,
                 mealType = inferredMealType,
+                dishTitle = inferredMealType.label,
                 latitude = passedLat,
                 longitude = passedLng
             )
@@ -80,7 +81,16 @@ class EntryEditorViewModel @Inject constructor(
 
     fun updateDishTitle(title: String) { _uiState.update { it.copy(dishTitle = title, errorMessage = null) } }
     fun updateNotes(notes: String) { _uiState.update { it.copy(notes = notes) } }
-    fun updateMealType(mealType: MealType) { _uiState.update { it.copy(mealType = mealType) } }
+    fun updateMealType(mealType: MealType) {
+        _uiState.update { current ->
+            val updatedTitle = if (current.dishTitle.isBlank() || MealType.entries.any { it.label == current.dishTitle }) {
+                mealType.label
+            } else {
+                current.dishTitle
+            }
+            current.copy(mealType = mealType, dishTitle = updatedTitle)
+        }
+    }
     fun updateRating(rating: Float) { _uiState.update { it.copy(rating = rating.coerceIn(1.0f, 5.0f)) } }
     fun updateCurrency(currency: String) { _uiState.update { it.copy(currency = currency) } }
     fun toggleFavorite() { _uiState.update { it.copy(isFavorite = !it.isFavorite) } }
@@ -91,13 +101,11 @@ class EntryEditorViewModel @Inject constructor(
     fun requestCurrentLocation() { fetchDeviceLocation() }
 
     fun updatePrice(price: String) {
-        val filtered = price.filter { it.isDigit() || it == '.' }
-        _uiState.update { it.copy(priceString = filtered) }
+        _uiState.update { it.copy(priceString = price.filter { c -> c.isDigit() || c == '.' }) }
     }
 
     fun updateTimestamp(timestamp: Long) {
-        val inferredMeal = MealType.fromTimestamp(timestamp)
-        _uiState.update { it.copy(timestamp = timestamp, mealType = inferredMeal) }
+        _uiState.update { it.copy(timestamp = timestamp, mealType = MealType.fromTimestamp(timestamp)) }
     }
 
     fun toggleTag(tag: TagEntity) {
@@ -141,37 +149,34 @@ class EntryEditorViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLocating = true) }
             val geocoded = geocoderRepository.reverseGeocode(latitude, longitude)
-            val locName = if (geocoded != null && geocoded.displayName.isNotBlank()) {
-                geocoded.displayName
-            } else {
-                _uiState.value.locationName.ifBlank { String.format(Locale.US, "%.4f, %.4f", latitude, longitude) }
+            val locName = geocoded?.displayName?.takeIf { it.isNotBlank() }
+                ?: String.format(Locale.US, "%.4f, %.4f", latitude, longitude)
+            _uiState.update { current ->
+                current.copy(
+                    geocodedAddress = locName,
+                    locationName = current.locationName.ifBlank { locName },
+                    isLocating = false
+                )
             }
-            _uiState.update { it.copy(locationName = locName, isLocating = false) }
         }
     }
 
     fun saveEntry() {
         val state = _uiState.value
-        if (state.dishTitle.trim().isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Please enter a title for your dish") }
-            return
-        }
+        val effectiveTitle = state.dishTitle.trim().ifBlank { state.mealType.label }
 
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+            _uiState.update { it.copy(dishTitle = effectiveTitle, isSaving = true, errorMessage = null) }
             try {
                 plateEntryDao.insertEntryWithTags(
-                    entry = state.toPlateEntryEntity(),
+                    entry = state.copy(dishTitle = effectiveTitle).toPlateEntryEntity(),
                     tags = state.selectedTags.toList(),
                     tagDao = tagDao
                 )
                 _uiState.update { it.copy(isSaving = false, isSavedSuccessfully = true) }
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(
-                        isSaving = false,
-                        errorMessage = "Failed to save journal entry: ${e.localizedMessage ?: "Unknown error"}"
-                    )
+                    it.copy(isSaving = false, errorMessage = "Failed to save: ${e.localizedMessage ?: "Unknown error"}")
                 }
             }
         }

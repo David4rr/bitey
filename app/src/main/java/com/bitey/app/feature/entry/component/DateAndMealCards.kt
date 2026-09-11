@@ -138,13 +138,6 @@ fun MealTypeSelectorCard(
             ) {
                 MealType.entries.forEach { type ->
                     val isSelected = selectedMealType == type
-                    val label = when (type) {
-                        MealType.BREAKFAST -> "Breakfast"
-                        MealType.LUNCH -> "Lunch"
-                        MealType.DINNER -> "Dinner"
-                        MealType.SNACK -> "Snack"
-                        MealType.LATE_NIGHT -> "Late Night"
-                    }
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -155,7 +148,7 @@ fun MealTypeSelectorCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = label,
+                            text = type.label,
                             style = MaterialTheme.typography.labelSmall,
                             color = if (isSelected) StickerDieCutWhite else theme.inkSecondary,
                             maxLines = 1

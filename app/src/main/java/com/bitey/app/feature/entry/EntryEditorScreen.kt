@@ -108,7 +108,8 @@ fun EntryEditorScreen(
         LocationInputCard(
             locationName = uiState.locationName, onLocationNameChange = { viewModel.updateLocationName(it) },
             latitude = uiState.latitude, longitude = uiState.longitude, isLocating = uiState.isLocating,
-            onRefreshLocation = { viewModel.requestCurrentLocation() }
+            onRefreshLocation = { viewModel.requestCurrentLocation() },
+            geocodedAddress = uiState.geocodedAddress
         )
         Spacer(modifier = Modifier.height(18.dp))
         PalateNotesCard(notes = uiState.notes, onNotesChange = { viewModel.updateNotes(it) })

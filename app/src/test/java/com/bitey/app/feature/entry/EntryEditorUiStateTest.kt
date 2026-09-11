@@ -13,9 +13,9 @@ class EntryEditorUiStateTest {
     @Test
     fun defaultState_hasExpectedDefaults() {
         val state = EntryEditorUiState()
-        assertEquals("", state.dishTitle)
+        assertEquals("Food", state.dishTitle)
         assertEquals("", state.notes)
-        assertEquals(MealType.LUNCH, state.mealType)
+        assertEquals(MealType.FOOD, state.mealType)
         assertEquals(5.0f, state.rating, 0.01f)
         assertEquals("", state.priceString)
         assertEquals("IDR", state.currency)
@@ -74,22 +74,10 @@ class EntryEditorUiStateTest {
     }
 
     @Test
-    fun mealTypeInference_matchesHourRanges() {
-        fun inferMealType(hour: Int): MealType {
-            return when (hour) {
-                in 5..10 -> MealType.BREAKFAST
-                in 11..14 -> MealType.LUNCH
-                in 15..17 -> MealType.SNACK
-                in 18..21 -> MealType.DINNER
-                else -> MealType.LATE_NIGHT
-            }
-        }
-
-        assertEquals(MealType.BREAKFAST, inferMealType(8))
-        assertEquals(MealType.LUNCH, inferMealType(12))
-        assertEquals(MealType.SNACK, inferMealType(16))
-        assertEquals(MealType.DINNER, inferMealType(19))
-        assertEquals(MealType.LATE_NIGHT, inferMealType(23))
-        assertEquals(MealType.LATE_NIGHT, inferMealType(2))
+    fun mealType_labelsAndValues() {
+        assertEquals("Food", MealType.FOOD.label)
+        assertEquals("Drink", MealType.DRINK.label)
+        assertEquals("Other", MealType.OTHER.label)
+        assertEquals(MealType.FOOD, MealType.fromTimestamp())
     }
 }

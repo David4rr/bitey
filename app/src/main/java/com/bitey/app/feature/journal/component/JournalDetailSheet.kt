@@ -36,13 +36,12 @@ fun JournalDetailSheet(
     val entry = item.entry
     val theme = LocalNeumorphicTheme.current
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var isShowingSticker by remember { mutableStateOf(entry.isStickerMode && entry.stickerImagePath != null) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(theme.surface)
-            .padding(horizontal = 24.dp, vertical = 18.dp)
+            .padding(horizontal = 20.dp, vertical = 14.dp)
     ) {
         Column(
             modifier = Modifier
@@ -57,7 +56,7 @@ fun JournalDetailSheet(
                     .align(Alignment.CenterHorizontally)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -72,67 +71,55 @@ fun JournalDetailSheet(
                     )
                     val dateStr = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.US).format(Date(entry.timestamp))
                     Text(
-                        text = "$dateStr • ${entry.mealType.name.lowercase().replaceFirstChar { it.uppercase() }}",
+                        text = "$dateStr • ${entry.mealType.label}",
                         style = MaterialTheme.typography.bodySmall,
                         color = theme.inkSecondary
                     )
                 }
 
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     AnimatedFavoriteButton(
                         isFavorite = entry.isFavorite,
                         onToggle = onToggleFavorite,
-                        containerSize = 38.dp,
+                        containerSize = 32.dp,
                         iconSize = 20.dp,
-                        withNeumorphicContainer = true
+                        withContainer = false
                     )
 
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .minimalistCard(cornerRadius = 19.dp, elevation = 0.dp),
-                        contentAlignment = Alignment.Center
+                    IconButton(
+                        onClick = { showDeleteConfirm = true },
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(
-                                imageVector = Icons.Rounded.Delete,
-                                contentDescription = "Delete Entry",
-                                tint = Color(0xFFEF4444),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Rounded.Delete,
+                            contentDescription = "Delete Entry",
+                            tint = Color(0xFFEF4444),
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .minimalistCard(cornerRadius = 19.dp, elevation = 0.dp),
-                        contentAlignment = Alignment.Center
+                    IconButton(
+                        onClick = onClose,
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        IconButton(onClick = onClose) {
-                            Icon(
-                                imageVector = Icons.Rounded.Close,
-                                contentDescription = "Close",
-                                tint = theme.inkSecondary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = "Close",
+                            tint = theme.inkSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            JournalDetailContent(
-                item = item,
-                isShowingSticker = isShowingSticker,
-                onToggleSticker = { isShowingSticker = !isShowingSticker }
-            )
+            JournalDetailContent(item = item)
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 

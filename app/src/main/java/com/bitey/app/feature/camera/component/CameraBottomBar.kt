@@ -3,37 +3,29 @@ package com.bitey.app.feature.camera.component
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FlipCameraAndroid
 import androidx.compose.material.icons.rounded.PhotoLibrary
-import androidx.compose.material.icons.rounded.Save
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.StickerDieCutWhite
 import com.bitey.app.feature.camera.PhotoMode
+import java.io.File
 
 @Composable
 fun CameraBottomBar(
@@ -45,73 +37,80 @@ fun CameraBottomBar(
     onCapture: () -> Unit,
     onSwitchCamera: () -> Unit,
     onPickFromFile: (() -> Unit)?,
+    capturedDishes: List<java.io.File> = emptyList(),
+    onDoneDishByDish: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color.Black.copy(alpha = 0.8f))
-            .padding(horizontal = 20.dp, vertical = 20.dp),
+            .background(Color.Black.copy(alpha = 0.82f))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Photo Modes (Whole Dish vs Per Dish) & Keep Original Toggle Row
+        // Mode Selector: Oneshot vs Dish-by-dish
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.White.copy(alpha = 0.15f))
+                .padding(3.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Photo Mode Selector
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color.White.copy(alpha = 0.15f))
-                    .padding(3.dp),
-                verticalAlignment = Alignment.CenterVertically
+            listOf(PhotoMode.ONESHOT to "Oneshot", PhotoMode.DISH_BY_DISH to "Dish-by-dish").forEach { (mode, label) ->
+                val isSelected = photoMode == mode
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (isSelected) BiteyOrange else Color.Transparent)
+                        .clickable { onPhotoModeChange(mode) }
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium),
+                        color = if (isSelected) StickerDieCutWhite else Color.White.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+
+        // Dish-by-dish captured shelf & Done button
+        if (photoMode == PhotoMode.DISH_BY_DISH && capturedDishes.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
             ) {
-                PhotoMode.entries.forEach { mode ->
-                    val isSelected = photoMode == mode
+                itemsIndexed(capturedDishes) { index, file ->
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(15.dp))
-                            .background(if (isSelected) BiteyOrange else Color.Transparent)
-                            .clickable { onPhotoModeChange(mode) }
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.5.dp, BiteyOrange, RoundedCornerShape(12.dp))
                     ) {
-                        Text(
-                            text = mode.label,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (isSelected) StickerDieCutWhite else Color.White.copy(alpha = 0.75f)
-                        )
+                        AsyncImage(model = file, contentDescription = "Dish ${index + 1}", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        Box(
+                            modifier = Modifier.align(Alignment.BottomEnd).background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(topStart = 6.dp)).padding(horizontal = 4.dp, vertical = 1.dp)
+                        ) {
+                            Text(text = "#${index + 1}", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = Color.White)
+                        }
                     }
                 }
             }
-
-            // Keep Original Photo Toggle
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(if (keepOriginal) BiteyOrange.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.12f))
-                    .clickable { onKeepOriginalToggle() }
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Spacer(modifier = Modifier.height(6.dp))
+            Button(
+                onClick = onDoneDishByDish,
+                colors = ButtonDefaults.buttonColors(containerColor = BiteyOrange, contentColor = StickerDieCutWhite),
+                shape = RoundedCornerShape(18.dp),
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Save,
-                    contentDescription = null,
-                    tint = if (keepOriginal) BiteyOrange else Color.White.copy(alpha = 0.6f),
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(5.dp))
-                Text(
-                    text = if (keepOriginal) "Keep Orig" else "Sticker Only",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (keepOriginal) Color.White else Color.White.copy(alpha = 0.6f)
-                )
+                Text(text = "Done (${capturedDishes.size} dish${if (capturedDishes.size > 1) "es" else ""}) →", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
             }
         }
+
+        Spacer(modifier = Modifier.height(14.dp))
 
         // Capture Bar: Gallery Picker | Shutter Button | Camera Flip
         Row(
@@ -159,11 +158,7 @@ fun CameraBottomBar(
                             .size(64.dp)
                             .clip(CircleShape)
                             .background(BiteyOrange)
-                            .pointerInput(Unit) {
-                                detectTapGestures {
-                                    onCapture()
-                                }
-                            }
+                            .clickable { onCapture() }
                     )
                 }
             }

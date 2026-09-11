@@ -28,10 +28,13 @@ import kotlin.math.min
 
 @Composable
 fun CameraViewfinder(
+    photoMode: PhotoMode = PhotoMode.ONESHOT,
+    onPhotoModeChange: (PhotoMode) -> Unit = {},
+    capturedDishes: List<File> = emptyList(),
     onPhotoCaptured: (File) -> Unit,
     onClose: () -> Unit,
     onPickFromFile: (() -> Unit)? = null,
-    onPhotoCapturedWithConfig: ((File, PhotoMode, Boolean) -> Unit)? = null,
+    onDoneDishByDish: () -> Unit = {},
     applyStatusBarPadding: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -44,7 +47,6 @@ fun CameraViewfinder(
     var flashMode by remember { mutableIntStateOf(ImageCapture.FLASH_MODE_OFF) }
     var lensFacing by remember { mutableStateOf(CameraSelector.DEFAULT_BACK_CAMERA) }
     var isCapturing by remember { mutableStateOf(false) }
-    var photoMode by remember { mutableStateOf(PhotoMode.WHOLE_DISH) }
     var keepOriginal by remember { mutableStateOf(true) }
     var focusPoint by remember { mutableStateOf<Pair<Float, Float>?>(null) }
     var showFocusRing by remember { mutableStateOf(false) }
@@ -129,7 +131,7 @@ fun CameraViewfinder(
 
         CameraBottomBar(
             photoMode = photoMode,
-            onPhotoModeChange = { photoMode = it },
+            onPhotoModeChange = onPhotoModeChange,
             keepOriginal = keepOriginal,
             onKeepOriginalToggle = { keepOriginal = !keepOriginal },
             isCapturing = isCapturing,
@@ -148,11 +150,7 @@ fun CameraViewfinder(
                                 val finalFile = if (selectedRatio == CameraRatio.SQUARE_1_1) cropFileToSquare(tempFile) else tempFile
                                 withContext(Dispatchers.Main) {
                                     isCapturing = false
-                                    if (onPhotoCapturedWithConfig != null) {
-                                        onPhotoCapturedWithConfig(finalFile, photoMode, keepOriginal)
-                                    } else {
-                                        onPhotoCaptured(finalFile)
-                                    }
+                                    onPhotoCaptured(finalFile)
                                 }
                             }
                         }
@@ -168,6 +166,8 @@ fun CameraViewfinder(
                 lensFacing = if (lensFacing == CameraSelector.DEFAULT_BACK_CAMERA) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
             },
             onPickFromFile = onPickFromFile,
+            capturedDishes = capturedDishes,
+            onDoneDishByDish = onDoneDishByDish,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }

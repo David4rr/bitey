@@ -45,7 +45,7 @@ class ProfileNavigationTest {
                 title = "Dan Dan Noodles",
                 fullImagePath = "/path1.webp",
                 thumbnailPath = "/path1.webp",
-                mealType = MealType.DINNER,
+                mealType = MealType.FOOD,
                 isFavorite = true,
                 latitude = -6.2,
                 longitude = 106.8,
@@ -60,7 +60,7 @@ class ProfileNavigationTest {
                 title = "Spicy Wontons",
                 fullImagePath = "/path2.webp",
                 thumbnailPath = "/path2.webp",
-                mealType = MealType.DINNER,
+                mealType = MealType.FOOD,
                 isFavorite = false,
                 latitude = null,
                 longitude = null,
@@ -75,7 +75,7 @@ class ProfileNavigationTest {
                 title = "Matcha Croissant",
                 fullImagePath = "/path3.webp",
                 thumbnailPath = "/path3.webp",
-                mealType = MealType.BREAKFAST,
+                mealType = MealType.DRINK,
                 isFavorite = true,
                 latitude = -6.19,
                 longitude = 106.82,
@@ -110,7 +110,7 @@ class ProfileNavigationTest {
         assertEquals(3, state.totalEntriesCount)
         assertEquals(2, state.favoriteEntriesCount)
         assertEquals(2, state.spotsWithLocationCount)
-        assertEquals(MealType.DINNER, state.topMealType)
+        assertEquals(MealType.FOOD, state.topMealType)
         assertEquals(listOf("Spicy", "Noodles"), state.favoriteTagNames)
         assertEquals(2, state.stickerModeEntriesCount)
         assertEquals(3, state.recentEntries.size)

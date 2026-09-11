@@ -24,6 +24,7 @@ import com.bitey.app.core.database.model.PlateEntryEntity
 import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.ui.component.AnimatedFavoriteButton
 import com.bitey.app.core.ui.theme.BiteyOrange
+import com.bitey.app.core.ui.theme.BiteyWarmYellow
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import java.util.Locale
 
@@ -42,43 +43,41 @@ fun BookCoverHeader(
         modifier = modifier.fillMaxWidth()
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            val mealLabel = entry.mealType.label
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(6.dp))
                     .background(BiteyOrange.copy(alpha = 0.12f))
-                    .border(1.dp, BiteyOrange.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
                     .padding(horizontal = 7.dp, vertical = 3.dp)
             ) {
                 Text(
-                    text = "VOL. ${entry.mealType.name.uppercase()}",
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp),
+                    text = mealLabel,
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                     color = BiteyOrange,
-                    fontSize = 9.sp
+                    fontSize = 10.sp
                 )
             }
 
             if (entry.rating > 0f) {
-                Spacer(modifier = Modifier.width(6.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(theme.surfaceVariant)
-                        .padding(horizontal = 6.dp, vertical = 3.dp)
-                ) {
-                    Icon(imageVector = Icons.Rounded.Star, contentDescription = "Rating", tint = BiteyOrange, modifier = Modifier.size(12.dp))
-                    Spacer(modifier = Modifier.width(2.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Rounded.Star,
+                        contentDescription = "Rating",
+                        tint = BiteyWarmYellow,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
                     Text(
                         text = String.format(Locale.US, "%.1f", entry.rating),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = theme.inkPrimary,
-                        fontSize = 11.sp
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = theme.inkPrimary
                     )
                 }
             }
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
@@ -95,14 +94,13 @@ fun BookCoverHeader(
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
-                    .background(theme.surfaceVariant.copy(alpha = 0.6f))
-                    .padding(3.dp)
-            ) {
-                AnimatedFavoriteButton(isFavorite = entry.isFavorite, onToggle = onToggleFavorite, modifier = Modifier.size(28.dp))
-            }
+            AnimatedFavoriteButton(
+                isFavorite = entry.isFavorite,
+                onToggle = onToggleFavorite,
+                withContainer = false,
+                iconSize = 22.dp,
+                containerSize = 28.dp
+            )
         }
     }
 }
@@ -125,10 +123,11 @@ fun BookCoverBottomInfo(
         ) {
             Text(
                 text = entry.title,
-                style = MaterialTheme.typography.titleMedium.copy(
+                style = MaterialTheme.typography.headlineSmall.copy(
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 19.sp,
-                    letterSpacing = (-0.3).sp
+                    fontSize = 24.sp,
+                    lineHeight = 28.sp,
+                    letterSpacing = (-0.4).sp
                 ),
                 color = theme.inkPrimary,
                 maxLines = 2,

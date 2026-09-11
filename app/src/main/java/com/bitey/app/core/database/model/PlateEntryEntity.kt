@@ -28,5 +28,5 @@ data class PlateEntryEntity(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val locationName: String? = null,
-    val mealType: MealType = MealType.LUNCH
+    val mealType: MealType = MealType.FOOD
 )

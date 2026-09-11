@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bitey.app.core.ui.neumorphic.minimalistCard
 import com.bitey.app.core.ui.theme.BiteyOrange
@@ -26,6 +27,7 @@ fun LocationInputCard(
     longitude: Double?,
     isLocating: Boolean,
     onRefreshLocation: () -> Unit,
+    geocodedAddress: String? = null,
     modifier: Modifier = Modifier
 ) {
     val theme = LocalNeumorphicTheme.current
@@ -51,7 +53,7 @@ fun LocationInputCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Establishment & Location",
+                        text = "Location",
                         style = MaterialTheme.typography.titleSmall,
                         color = theme.inkPrimary
                     )
@@ -84,7 +86,7 @@ fun LocationInputCard(
             OutlinedTextField(
                 value = locationName,
                 onValueChange = onLocationNameChange,
-                placeholder = { Text("Restaurant or street name", color = theme.inkMuted) },
+                placeholder = { Text(geocodedAddress ?: "Restaurant or street name", color = theme.inkMuted) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -101,10 +103,17 @@ fun LocationInputCard(
 
             if (latitude != null && longitude != null) {
                 Spacer(modifier = Modifier.height(6.dp))
+                val gpsInfo = if (!geocodedAddress.isNullOrBlank()) {
+                    String.format(Locale.US, "GPS: %.4f, %.4f • %s", latitude, longitude, geocodedAddress)
+                } else {
+                    String.format(Locale.US, "GPS: %.4f, %.4f", latitude, longitude)
+                }
                 Text(
-                    text = String.format(Locale.US, "GPS: %.4f, %.4f", latitude, longitude),
+                    text = gpsInfo,
                     style = MaterialTheme.typography.bodySmall,
-                    color = theme.inkMuted
+                    color = theme.inkMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }

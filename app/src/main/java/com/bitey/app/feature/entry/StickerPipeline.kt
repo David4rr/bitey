@@ -27,7 +27,7 @@ class StickerPipeline @Inject constructor(
 ) {
 
     suspend fun createStickerWithFallback(file: File): CompositedSticker? = withContext(Dispatchers.IO) {
-        val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return@withContext null
+        val bitmap = decodeSampledBitmap(file) ?: return@withContext null
         try {
             when (val segResult = foodSubjectSegmenter.segment(bitmap)) {
                 is SegmentationResult.Success -> {
@@ -49,6 +49,70 @@ class StickerPipeline @Inject constructor(
         } finally {
             bitmap.recycle()
         }
+    }
+
+    suspend fun createStickersForMultiSubject(file: File): List<CompositedSticker> = withContext(Dispatchers.IO) {
+        val bitmap = decodeSampledBitmap(file) ?: return@withContext emptyList()
+        val stickers = mutableListOf<CompositedSticker>()
+        try {
+            when (val segResult = foodSubjectSegmenter.segment(bitmap)) {
+                is SegmentationResult.Success -> {
+                    if (segResult.subjectBitmaps.size > 1) {
+                        for (subjBmp in segResult.subjectBitmaps) {
+                            runCatching {
+                                stickers.add(stickerCompositor.createDieCutSticker(subjBmp))
+                            }
+                        }
+                    }
+                    runCatching {
+                        stickers.add(stickerCompositor.createDieCutSticker(segResult.foregroundBitmap))
+                    }
+                }
+                else -> {
+                    val circular = fallbackStickerCropper.createCircularSubject(bitmap)
+                    try {
+                        stickers.add(stickerCompositor.createDieCutSticker(circular))
+                    } finally {
+                        circular.recycle()
+                    }
+                }
+            }
+        } finally {
+            bitmap.recycle()
+        }
+        stickers
+    }
+
+    suspend fun createManualSticker(file: File, style: StickerStyle): CompositedSticker? = withContext(Dispatchers.IO) {
+        val bitmap = decodeSampledBitmap(file) ?: return@withContext null
+        try {
+            val subject = when (style) {
+                StickerStyle.CIRCULAR_BADGE -> fallbackStickerCropper.createCircularSubject(bitmap)
+                StickerStyle.ROUNDED_TILE -> fallbackStickerCropper.createRoundedRectSubject(bitmap)
+                else -> fallbackStickerCropper.createCircularSubject(bitmap)
+            }
+            try {
+                stickerCompositor.createDieCutSticker(subject)
+            } finally {
+                subject.recycle()
+            }
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
+    private fun decodeSampledBitmap(file: File, maxDim: Int = 1024): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        var sampleSize = 1
+        val largest = maxOf(bounds.outWidth, bounds.outHeight)
+        while ((largest / sampleSize) > maxDim * 1.5) { sampleSize *= 2 }
+        val opts = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        return BitmapFactory.decodeFile(file.absolutePath, opts)
     }
 
     suspend fun generateSticker(

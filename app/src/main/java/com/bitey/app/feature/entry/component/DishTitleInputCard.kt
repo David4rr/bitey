@@ -32,7 +32,7 @@ fun DishTitleInputCard(
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = "Dish Title",
+                text = "Name",
                 style = MaterialTheme.typography.titleSmall,
                 color = theme.inkPrimary
             )

@@ -12,7 +12,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 sealed interface SegmentationResult {
-    data class Success(val foregroundBitmap: Bitmap) : SegmentationResult
+    data class Success(val foregroundBitmap: Bitmap, val subjectBitmaps: List<Bitmap> = emptyList()) : SegmentationResult
     data object NoSubjectFound : SegmentationResult
     data class Failure(val error: Throwable) : SegmentationResult
 }
@@ -22,7 +22,6 @@ class FoodSubjectSegmenter @Inject constructor() {
 
     private val options = SubjectSegmenterOptions.Builder()
         .enableForegroundBitmap()
-        .enableForegroundConfidenceMask()
         .build()
 
     private val segmenter: SubjectSegmenter by lazy {
@@ -30,18 +29,34 @@ class FoodSubjectSegmenter @Inject constructor() {
     }
 
     suspend fun segment(bitmap: Bitmap): SegmentationResult = withContext(Dispatchers.Default) {
+        var scaledBitmap: Bitmap? = null
         try {
-            val inputImage = InputImage.fromBitmap(bitmap, 0)
+            val maxDim = kotlin.math.max(bitmap.width, bitmap.height)
+            val inputBitmap = if (maxDim > 800) {
+                val scale = 800f / maxDim
+                val targetW = kotlin.math.max(1, (bitmap.width * scale).toInt())
+                val targetH = kotlin.math.max(1, (bitmap.height * scale).toInt())
+                Bitmap.createScaledBitmap(bitmap, targetW, targetH, true).also { scaledBitmap = it }
+            } else {
+                bitmap
+            }
+
+            val inputImage = InputImage.fromBitmap(inputBitmap, 0)
             val result = segmenter.process(inputImage).await()
             val foreground = result.foregroundBitmap
+            val subjectBitmaps = result.subjects.mapNotNull { it.bitmap }.filter { hasVisibleContent(it) }
 
             if (foreground != null && hasVisibleContent(foreground)) {
-                SegmentationResult.Success(foreground)
+                SegmentationResult.Success(foreground, subjectBitmaps)
+            } else if (subjectBitmaps.isNotEmpty()) {
+                SegmentationResult.Success(subjectBitmaps.first(), subjectBitmaps)
             } else {
                 SegmentationResult.NoSubjectFound
             }
         } catch (e: Exception) {
             SegmentationResult.Failure(e)
+        } finally {
+            scaledBitmap?.recycle()
         }
     }
 
