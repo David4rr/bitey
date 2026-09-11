@@ -27,8 +27,10 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.ui.unit.dp
-import com.bitey.app.core.ui.neumorphic.neumorphicRaised
 import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import kotlinx.coroutines.launch
@@ -40,7 +42,8 @@ fun AnimatedFavoriteButton(
     modifier: Modifier = Modifier,
     iconSize: Dp = 20.dp,
     containerSize: Dp = 38.dp,
-    withNeumorphicContainer: Boolean = true
+    withContainer: Boolean = true,
+    withNeumorphicContainer: Boolean = withContainer
 ) {
     val theme = LocalNeumorphicTheme.current
     val coroutineScope = rememberCoroutineScope()
@@ -89,12 +92,14 @@ fun AnimatedFavoriteButton(
         onToggle()
     }
 
-    if (withNeumorphicContainer) {
+    val showContainer = withContainer && withNeumorphicContainer
+    if (showContainer) {
         Box(
             modifier = modifier
                 .size(containerSize)
-                .neumorphicRaised(cornerRadius = containerSize / 2, shadowOffset = 3.dp, blurRadius = 6.dp)
                 .clip(CircleShape)
+                .background(theme.surface)
+                .border(BorderStroke(1.dp, theme.border), CircleShape)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,

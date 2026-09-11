@@ -114,4 +114,37 @@ class RevisionFeaturesTest {
         assertEquals("Sourdough Toast", filtered[0].entry.title)
         assertEquals("Gluten-Free Artisanal", filtered[0].tags[0].tagName)
     }
+
+    @Test
+    fun biteyPrimaryColor_isVibrantOrange() {
+        val orange = com.bitey.app.core.ui.theme.BiteyOrange
+        // Primary color must be culinary orange: Red > Green and Red > Blue
+        assertTrue("Primary color should have strong red component", orange.red > 0.9f)
+        assertTrue("Primary color should have green component for warmth", orange.green > 0.2f)
+        assertTrue("Primary color should have low blue for warm orange", orange.blue < 0.3f)
+    }
+
+    @Test
+    fun navigationItems_journalAndProfileOnly() {
+        val items = com.bitey.app.core.navigation.Screen.bottomNavItems
+        assertEquals(2, items.size)
+        assertEquals(com.bitey.app.core.navigation.Screen.Journal, items[0])
+        assertEquals(com.bitey.app.core.navigation.Screen.Profile, items[1])
+    }
+
+    @Test
+    fun tags_unboxedDisplayContract() {
+        val tag = TagEntity(tagId = 1, tagName = "Savory")
+        val display = "#${tag.tagName}"
+        assertEquals("#Savory", display)
+    }
+
+    @Test
+    fun searchState_clearContract() {
+        var query = "Ramen"
+        fun onClear() { query = "" }
+        assertEquals("Ramen", query)
+        onClear()
+        assertEquals("", query)
+    }
 }

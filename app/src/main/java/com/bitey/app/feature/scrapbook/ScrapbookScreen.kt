@@ -34,6 +34,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
@@ -112,6 +113,7 @@ private val BackgroundPalettes = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScrapbookScreen(
+    onNavigateBack: (() -> Unit)? = null,
     viewModel: ScrapbookViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -143,7 +145,24 @@ fun ScrapbookScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (onNavigateBack != null) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = "Back",
+                            tint = theme.inkPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Column {
                 Text(
                     text = "Story Canvas",
                     style = MaterialTheme.typography.titleLarge.copy(
@@ -157,6 +176,7 @@ fun ScrapbookScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = theme.inkSecondary
                 )
+            }
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

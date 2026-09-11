@@ -15,12 +15,12 @@ import com.bitey.app.core.ui.theme.StickerDieCutWhite
 import com.bitey.app.core.ui.theme.StickerSoftShadow
 
 /**
- * Minimalist card modifier: hardware-accelerated, crisp subtle border, optional soft shadow.
- * Replaces heavy Neumorphic software blur with 120fps display-list drawing.
+ * Minimalist card modifier: hardware-accelerated, crisp subtle 1px border, flat surface.
+ * All neumorphism and heavy drop shadows removed in favor of clean utilitarian minimalism.
  */
 fun Modifier.minimalistCard(
-    cornerRadius: Dp = 16.dp,
-    elevation: Dp = 1.dp
+    cornerRadius: Dp = 12.dp,
+    elevation: Dp = 0.dp
 ): Modifier = this.composed {
     val theme = LocalNeumorphicTheme.current
     val shape = RoundedCornerShape(cornerRadius)
@@ -55,65 +55,51 @@ fun Modifier.minimalistInset(
         .border(1.dp, theme.border.copy(alpha = 0.6f), shape)
 }
 
-/**
- * Drop-in backward compatibility for neumorphicCard: maps to clean minimalist card.
- */
+@Deprecated("Neumorphism removed. Use minimalistCard instead.")
 fun Modifier.neumorphicCard(
-    cornerRadius: Dp = 16.dp,
-    elevation: Dp = 1.dp,
-    blurRadius: Dp = 4.dp
-): Modifier = this.minimalistCard(cornerRadius = cornerRadius, elevation = elevation)
+    cornerRadius: Dp = 12.dp,
+    elevation: Dp = 0.dp,
+    blurRadius: Dp = 0.dp
+): Modifier = this.minimalistCard(cornerRadius = cornerRadius, elevation = 0.dp)
 
+@Deprecated("Neumorphism removed. Use minimalistCard instead.")
 fun Modifier.neumorphicCard(
-    cornerRadius: Dp = 16.dp,
+    cornerRadius: Dp = 12.dp,
     backgroundColor: Color,
-    elevation: Dp = 1.dp,
-    blurRadius: Dp = 4.dp
+    elevation: Dp = 0.dp,
+    blurRadius: Dp = 0.dp
 ): Modifier = this.composed {
     val theme = LocalNeumorphicTheme.current
     val shape = RoundedCornerShape(cornerRadius)
 
-    val shadowModifier = if (elevation > 0.dp) {
-        Modifier.shadow(
-            elevation = elevation.coerceAtMost(2.dp),
-            shape = shape,
-            ambientColor = Color(0x08000000),
-            spotColor = Color(0x0D000000)
-        )
-    } else Modifier
-
-    shadowModifier
+    this
         .clip(shape)
         .background(backgroundColor)
         .border(1.dp, theme.border, shape)
 }
 
-/**
- * Drop-in backward compatibility for neumorphicRaised: maps to minimalist elevated button/pill.
- */
+@Deprecated("Neumorphism removed. Use minimalistCard instead.")
 fun Modifier.neumorphicRaised(
-    cornerRadius: Dp = 16.dp,
-    shadowOffset: Dp = 2.dp,
-    blurRadius: Dp = 4.dp
-): Modifier = this.minimalistCard(cornerRadius = cornerRadius, elevation = 1.dp)
+    cornerRadius: Dp = 12.dp,
+    shadowOffset: Dp = 0.dp,
+    blurRadius: Dp = 0.dp
+): Modifier = this.minimalistCard(cornerRadius = cornerRadius, elevation = 0.dp)
 
+@Deprecated("Neumorphism removed. Use minimalistCard instead.")
 fun Modifier.neumorphicRaised(
-    cornerRadius: Dp = 16.dp,
+    cornerRadius: Dp = 12.dp,
     lightShadowColor: Color = Color.Transparent,
     darkShadowColor: Color = Color.Transparent,
-    shadowOffset: Dp = 2.dp,
-    blurRadius: Dp = 4.dp
-): Modifier = this.minimalistCard(cornerRadius = cornerRadius, elevation = 1.dp)
+    shadowOffset: Dp = 0.dp,
+    blurRadius: Dp = 0.dp
+): Modifier = this.minimalistCard(cornerRadius = cornerRadius, elevation = 0.dp)
 
-/**
- * Drop-in backward compatibility for neumorphicInset: maps to clean minimalist recessed surface.
- */
+@Deprecated("Neumorphism removed. Use minimalistInset instead.")
 fun Modifier.neumorphicInset(
-    cornerRadius: Dp = 14.dp,
-    depth: Dp = 2.dp,
-    blurRadius: Dp = 4.dp
+    cornerRadius: Dp = 10.dp,
+    depth: Dp = 0.dp,
+    blurRadius: Dp = 0.dp
 ): Modifier = this.minimalistInset(cornerRadius = cornerRadius)
-
 /**
  * Die-cut sticker effect:
  * Since StickerCompositor already bakes the authentic die-cut white stroke and soft drop shadow

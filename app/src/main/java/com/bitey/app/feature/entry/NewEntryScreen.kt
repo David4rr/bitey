@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,9 +47,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -86,6 +89,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewEntryScreen(
     onNavigateBack: () -> Unit,
@@ -153,23 +157,13 @@ fun NewEntryScreen(
         }
     }
 
-    if (uiState.isCameraActive) {
-        CameraViewfinder(
-            onPhotoCaptured = { file ->
-                viewModel.onPhotoCaptured(file)
-            },
-            onClose = {
-                viewModel.closeCamera()
-            }
-        )
-    } else {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(theme.background)
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp)
-        ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(theme.background)
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp)
+    ) {
             // Navigation Header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -312,6 +306,43 @@ fun NewEntryScreen(
                     viewModel.generateSticker(style)
                 }
             )
+        }
+
+    if (uiState.isCameraActive) {
+        ModalBottomSheet(
+            onDismissRequest = { viewModel.closeCamera() },
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 12.dp, bottom = 6.dp)
+                        .width(44.dp)
+                        .height(4.5.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.5f))
+                )
+            },
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            containerColor = Color(0xFF141416),
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.92f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+            ) {
+                CameraViewfinder(
+                    onPhotoCaptured = { file ->
+                        viewModel.onPhotoCaptured(file)
+                    },
+                    onClose = {
+                        viewModel.closeCamera()
+                    },
+                    applyStatusBarPadding = false,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }

@@ -13,11 +13,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -139,12 +141,27 @@ fun CameraCaptureBottomSheet(
             if (!uiState.isSegmenting) onDismissRequest()
         },
         sheetState = sheetState,
-        dragHandle = null,
-        containerColor = if (hasCameraPermission) Color.Black else theme.background,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        modifier = Modifier.fillMaxSize()
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 12.dp, bottom = 6.dp)
+                    .width(44.dp)
+                    .height(4.5.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.5f))
+            )
+        },
+        containerColor = if (hasCameraPermission) Color(0xFF141416) else theme.surface,
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.92f)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+        ) {
             if (hasCameraPermission) {
                 CameraViewfinder(
                     onPhotoCaptured = {},
@@ -164,6 +181,7 @@ fun CameraCaptureBottomSheet(
                             }
                         )
                     },
+                    applyStatusBarPadding = false,
                     modifier = Modifier.fillMaxSize()
                 )
             } else {

@@ -22,6 +22,8 @@ data class MinimalistThemeColors(
     val inkSecondary: Color,
     val inkMuted: Color,
     val isDark: Boolean,
+    val primary: Color = BiteyOrange,
+    val primaryVariant: Color = BiteyOrangeVariant,
     val lightShadow: Color = Color.Transparent,
     val darkShadow: Color = Color.Transparent
 )

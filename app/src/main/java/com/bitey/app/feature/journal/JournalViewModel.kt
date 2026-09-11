@@ -162,6 +162,10 @@ class JournalViewModel @Inject constructor(
         _isGridView.update { !it }
     }
 
+    fun setGridView(isGrid: Boolean) {
+        _isGridView.value = isGrid
+    }
+
     fun selectEntryForDetail(entry: PlateEntryWithTags?) {
         _selectedEntryForDetail.value = entry
     }

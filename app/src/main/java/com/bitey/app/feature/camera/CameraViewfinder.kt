@@ -79,7 +79,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.bitey.app.core.ui.neumorphic.neumorphicRaised
 import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.BiteyWarmYellow
 import com.bitey.app.core.ui.theme.StickerDieCutWhite
@@ -109,6 +108,7 @@ fun CameraViewfinder(
     onClose: () -> Unit,
     onPickFromFile: (() -> Unit)? = null,
     onPhotoCapturedWithConfig: ((File, PhotoMode, Boolean) -> Unit)? = null,
+    applyStatusBarPadding: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -295,8 +295,8 @@ fun CameraViewfinder(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .then(if (applyStatusBarPadding) Modifier.statusBarsPadding() else Modifier)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {

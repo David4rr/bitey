@@ -15,10 +15,12 @@ import com.bitey.app.feature.fatetable.FateTableScreen
 import com.bitey.app.feature.footprints.FootprintsScreen
 import com.bitey.app.feature.journal.JournalScreen
 import com.bitey.app.feature.scrapbook.ScrapbookScreen
+import com.bitey.app.feature.profile.ProfileScreen
 @Composable
 fun BiteyNavHost(
     navController: NavHostController,
     paddingValues: PaddingValues,
+    onOpenLiveCamera: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -28,28 +30,35 @@ fun BiteyNavHost(
     ) {
         composable(Screen.Journal.route) {
             JournalScreen(
-                onNavigateToNewEntry = {
-                    navController.navigate(Screen.NewEntry.route)
-                }
+                onNavigateToNewEntry = onOpenLiveCamera,
+                onNavigateToFootprints = { navController.navigate(Screen.Footprints.route) },
+                onNavigateToFateTable = { navController.navigate(Screen.FateTable.route) },
+                onNavigateToScrapbook = { navController.navigate(Screen.Scrapbook.route) }
             )
         }
 
+        composable(Screen.Profile.route) {
+            ProfileScreen()
+        }
+
         composable(Screen.Footprints.route) {
-            FootprintsScreen()
+            FootprintsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable(Screen.FateTable.route) {
             FateTableScreen(
-                onNavigateToNewEntry = {
-                    navController.navigate(Screen.NewEntry.route)
-                }
+                onNavigateToNewEntry = onOpenLiveCamera,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
         composable(Screen.Scrapbook.route) {
-            ScrapbookScreen()
+            ScrapbookScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
-
         composable(Screen.NewEntry.route) {
             NewEntryScreen(
                 onNavigateBack = {

@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.Clear
@@ -81,7 +82,6 @@ import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.ui.component.AnimatedFavoriteButton
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
 import com.bitey.app.core.ui.neumorphic.minimalistCard
-import com.bitey.app.core.ui.neumorphic.neumorphicRaised
 import com.bitey.app.core.ui.theme.BiteyMint
 import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
@@ -98,6 +98,7 @@ import java.util.Locale
 
 @Composable
 fun FootprintsScreen(
+    onNavigateBack: (() -> Unit)? = null,
     viewModel: FootprintsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -214,8 +215,25 @@ fun FootprintsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (onNavigateBack != null) {
+                            IconButton(
+                                onClick = onNavigateBack,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = theme.inkPrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "Culinary Map",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
@@ -242,6 +260,7 @@ fun FootprintsScreen(
                         )
                     }
 
+                    }
                     // Quick Favorite Pin Filter Toggle Button
                     AnimatedFavoriteButton(
                         isFavorite = uiState.isFavoritesOnly,
@@ -586,7 +605,7 @@ private fun MapSpotCarouselItem(
 }
 
 /**
- * Redesigned tactile Neumorphic preview card for selected map pin.
+ * Clean minimalist preview card for selected map pin.
  */
 @Composable
 private fun MarkerPreviewCard(
@@ -604,7 +623,7 @@ private fun MarkerPreviewCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .minimalistCard(cornerRadius = 24.dp)
+            .minimalistCard(cornerRadius = 12.dp, elevation = 0.dp)
             .padding(16.dp)
     ) {
         Column {

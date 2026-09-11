@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Close
@@ -112,6 +113,7 @@ private val SliceColors = listOf(
 @Composable
 fun FateTableScreen(
     onNavigateToNewEntry: () -> Unit = {},
+    onNavigateBack: (() -> Unit)? = null,
     viewModel: FateTableViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -151,8 +153,25 @@ fun FateTableScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (onNavigateBack != null) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = "Back",
+                            tint = theme.inkPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "Fate's Table",
                         style = MaterialTheme.typography.headlineMedium.copy(
@@ -180,6 +199,7 @@ fun FateTableScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = theme.inkSecondary
                 )
+            }
             }
 
             // Candidate shuffle button if pool is large
@@ -278,11 +298,11 @@ fun FateTableScreen(
                     .padding(12.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // Outer Neumorphic bezel ring
+                // Outer minimalist bezel ring
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .minimalistCard(cornerRadius = 180.dp)
+                        .minimalistCard(cornerRadius = 180.dp, elevation = 0.dp)
                 )
 
                 // Rotating Wheel Canvas
@@ -502,7 +522,7 @@ private fun CenterHubCap() {
             .size(54.dp)
             .clip(CircleShape)
             .background(theme.surface)
-            .minimalistCard(cornerRadius = 27.dp, elevation = 2.dp),
+            .minimalistCard(cornerRadius = 27.dp, elevation = 0.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
