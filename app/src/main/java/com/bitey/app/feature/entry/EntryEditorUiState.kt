@@ -1,6 +1,7 @@
 package com.bitey.app.feature.entry
 
 import com.bitey.app.core.database.model.MealType
+import com.bitey.app.core.database.model.PlateEntryEntity
 import com.bitey.app.core.database.model.TagEntity
 
 data class EntryEditorUiState(
@@ -25,4 +26,24 @@ data class EntryEditorUiState(
     val isSavedSuccessfully: Boolean = false,
     val errorMessage: String? = null,
     val isNewTagDialogOpen: Boolean = false
-)
+) {
+    fun toPlateEntryEntity(): PlateEntryEntity {
+        return PlateEntryEntity(
+            title = dishTitle.trim(),
+            note = notes.trim().takeIf { it.isNotBlank() },
+            fullImagePath = imagePath,
+            stickerImagePath = stickerPath,
+            thumbnailPath = stickerPath ?: imagePath,
+            isStickerMode = isStickerMode,
+            rating = rating,
+            price = priceString.toDoubleOrNull(),
+            currency = currency,
+            isFavorite = isFavorite,
+            timestamp = timestamp,
+            latitude = latitude,
+            longitude = longitude,
+            locationName = locationName.trim().takeIf { it.isNotBlank() },
+            mealType = mealType
+        )
+    }
+}

@@ -147,4 +147,13 @@ class RevisionFeaturesTest {
         onClear()
         assertEquals("", query)
     }
+
+    @Test
+    fun morphingSearchBar_totalCodeUnder200Lines() {
+        val file = java.io.File("src/main/java/com/bitey/app/core/ui/component/MorphingSearchBar.kt")
+        if (file.exists()) {
+            val lineCount = file.readLines().size
+            assertTrue("MorphingSearchBar must be <= 200 lines, but was $lineCount", lineCount <= 200)
+        }
+    }
 }
