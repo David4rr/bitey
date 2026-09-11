@@ -78,17 +78,15 @@ fun JournalScreen(
                             val pagerState = rememberPagerState(pageCount = { uiState.entries.size })
                             HorizontalPager(
                                 state = pagerState,
-                                contentPadding = PaddingValues(start = 8.dp, end = 18.dp, top = 2.dp, bottom = 54.dp),
-                                pageSpacing = 14.dp,
+                                contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 2.dp, bottom = 68.dp),
+                                pageSpacing = 16.dp,
                                 modifier = Modifier.fillMaxSize().clipToBounds()
                             ) { page ->
                                 val item = uiState.entries[page]
-                                val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
-                                val fadeAlpha = if (pageOffset > 0) (1f - pageOffset * 1.5f).coerceIn(0f, 1f) else 1f
-
                                 Box(
                                     modifier = Modifier.fillMaxSize().graphicsLayer {
-                                        alpha = fadeAlpha
+                                        val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                                        alpha = if (pageOffset > 0) (1f - pageOffset * 1.5f).coerceIn(0f, 1f) else 1f
                                         if (pageOffset > 0) {
                                             scaleX = (1f - pageOffset * 0.08f).coerceIn(0.92f, 1f)
                                             scaleY = (1f - pageOffset * 0.08f).coerceIn(0.92f, 1f)
@@ -98,6 +96,7 @@ fun JournalScreen(
                                 ) {
                                     HistoryGridSingleCard(
                                         item = item,
+                                        isCurrentPage = pagerState.currentPage == page,
                                         onClick = { viewModel.selectEntryForDetail(item) },
                                         onToggleFavorite = { viewModel.toggleFavorite(item.entry) }
                                     )
@@ -106,7 +105,7 @@ fun JournalScreen(
                         }
                         else -> {
                             LazyColumn(
-                                contentPadding = PaddingValues(start = 6.dp, end = 16.dp, top = 2.dp, bottom = 54.dp),
+                                contentPadding = PaddingValues(start = 6.dp, end = 16.dp, top = 2.dp, bottom = 68.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
@@ -141,31 +140,14 @@ fun JournalScreen(
                 }
             }
 
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = 6.dp)
-            ) {
-                item {
-                    FilterPill(
-                        text = "All",
-                        isSelected = uiState.selectedMealType == null && uiState.selectedTagId == null,
-                        onClick = { viewModel.selectMealType(null); viewModel.selectTag(null) }
-                    )
-                }
-                items(MealType.entries, key = { it.name }) { mealType ->
-                    val isSelected = uiState.selectedMealType == mealType
-                    FilterPill(
-                        text = mealType.name.lowercase().replaceFirstChar { it.uppercase() },
-                        isSelected = isSelected,
-                        onClick = { viewModel.selectMealType(if (isSelected) null else mealType) }
-                    )
-                }
-                items(uiState.availableTags, key = { it.tagId }) { tag ->
-                    FilterPill(text = "#${tag.tagName}", isSelected = uiState.selectedTagId == tag.tagId, onClick = { viewModel.selectTag(tag.tagId) })
-                }
-            }
+            JournalFilterBar(
+                selectedMealType = uiState.selectedMealType,
+                selectedTagId = uiState.selectedTagId,
+                availableTags = uiState.availableTags,
+                onSelectMealType = { viewModel.selectMealType(it) },
+                onSelectTag = { viewModel.selectTag(it) },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 

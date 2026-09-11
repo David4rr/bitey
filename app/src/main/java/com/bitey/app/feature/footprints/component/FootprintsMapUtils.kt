@@ -90,6 +90,7 @@ fun rememberMapViewWithLifecycle(): MapView {
         onDispose {
             lifecycle.removeObserver(lifecycleObserver)
             mapView.onPause()
+            mapView.onDetach()
         }
     }
 

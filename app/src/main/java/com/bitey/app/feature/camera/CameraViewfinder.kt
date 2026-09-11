@@ -70,6 +70,14 @@ fun CameraViewfinder(
         }
     }
 
+    DisposableEffect(context) {
+        onDispose {
+            runCatching {
+                ProcessCameraProvider.getInstance(context.applicationContext).get().unbindAll()
+            }
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             AndroidView(

@@ -36,8 +36,7 @@ fun FootprintsScreen(
     val locationLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { perms ->
-        val granted = perms[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                perms[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        val granted = perms[Manifest.permission.ACCESS_FINE_LOCATION] == true || perms[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         if (granted) viewModel.fetchDeviceLocation()
     }
 
@@ -49,6 +48,9 @@ fun FootprintsScreen(
         }
     }
 
+    val customMarkerIcon = remember(context) { FootprintsMapUtils.createCustomMarkerIcon(context) }
+    val userMarkerIcon = remember(context) { FootprintsMapUtils.createUserLocationMarkerIcon(context) }
+
     LaunchedEffect(uiState.entriesWithLocation, deviceLocation, mapView) {
         mapView.overlays.clear()
         deviceLocation?.let { loc ->
@@ -56,7 +58,7 @@ fun FootprintsScreen(
                 position = GeoPoint(loc.latitude, loc.longitude)
                 title = "Your Location"
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                icon = FootprintsMapUtils.createUserLocationMarkerIcon(context)
+                icon = userMarkerIcon
             }
             mapView.overlays.add(userMarker)
         }
@@ -69,7 +71,7 @@ fun FootprintsScreen(
                 title = item.entry.title
                 snippet = item.entry.locationName ?: ""
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                icon = FootprintsMapUtils.createCustomMarkerIcon(context)
+                icon = customMarkerIcon
                 setOnMarkerClickListener { _, _ ->
                     viewModel.selectEntry(item)
                     mapView.controller.animateTo(GeoPoint(lat, lng))
@@ -121,8 +123,7 @@ fun FootprintsScreen(
                 } else {
                     viewModel.fetchDeviceLocation()
                     val target = deviceLocation?.let { GeoPoint(it.latitude, it.longitude) }
-                        ?: uiState.entriesWithLocation.firstOrNull()?.let { GeoPoint(it.entry.latitude!!, it.entry.longitude!!) }
-                        ?: GeoPoint(-6.2088, 106.8456)
+                        ?: uiState.entriesWithLocation.firstOrNull()?.let { GeoPoint(it.entry.latitude!!, it.entry.longitude!!) } ?: GeoPoint(-6.2088, 106.8456)
                     mapView.controller.animateTo(target)
                     mapView.controller.setZoom(16.0)
                 }
