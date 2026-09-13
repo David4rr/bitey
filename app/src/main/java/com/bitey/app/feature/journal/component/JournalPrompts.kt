@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bitey.app.core.ui.neumorphic.minimalistCard
 import com.bitey.app.core.ui.theme.BiteyOrange
+import com.bitey.app.core.ui.theme.BrandHeaderMedium
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.core.ui.theme.StickerDieCutWhite
 
@@ -37,9 +38,13 @@ fun FilterPill(
     val theme = LocalNeumorphicTheme.current
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (isSelected) BiteyOrange.copy(alpha = 0.12f)
+                else theme.surfaceVariant.copy(alpha = 0.55f)
+            )
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(vertical = 9.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
@@ -47,14 +52,14 @@ fun FilterPill(
                 text = text,
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    fontSize = 12.sp,
-                    letterSpacing = 0.3.sp
+                    fontSize = 13.sp,
+                    letterSpacing = 0.2.sp
                 ),
                 color = if (isSelected) BiteyOrange else theme.inkSecondary
             )
             if (isSelected) {
                 Spacer(modifier = Modifier.height(2.dp))
-                Box(modifier = Modifier.width(14.dp).height(2.dp).clip(RoundedCornerShape(1.dp)).background(BiteyOrange))
+                Box(modifier = Modifier.width(16.dp).height(2.dp).clip(RoundedCornerShape(1.dp)).background(BiteyOrange))
             }
         }
     }
@@ -77,7 +82,7 @@ fun EmptyJournalPrompt(onCaptureClick: () -> Unit, modifier: Modifier = Modifier
                 }
 
                 Spacer(modifier = Modifier.height(18.dp))
-                Text(text = "No Bites Logged Yet", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = theme.inkPrimary)
+                Text(text = "No Bites Logged Yet", style = BrandHeaderMedium, color = theme.inkPrimary)
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "Capture your meal to start creating die-cut stickers and tracking your culinary adventures.",
@@ -113,7 +118,7 @@ fun NoSearchResultsPrompt(onClearFilters: () -> Unit, modifier: Modifier = Modif
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(imageVector = Icons.Rounded.Search, contentDescription = null, tint = theme.inkMuted, modifier = Modifier.size(40.dp))
                 Spacer(modifier = Modifier.height(14.dp))
-                Text(text = "No Matching Bites", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = theme.inkPrimary)
+                Text(text = "No Matching Bites", style = BrandHeaderMedium, color = theme.inkPrimary)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Try adjusting your search terms or meal type filters.",

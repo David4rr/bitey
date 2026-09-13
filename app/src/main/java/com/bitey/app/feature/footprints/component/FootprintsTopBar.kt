@@ -16,6 +16,7 @@ import com.bitey.app.core.ui.component.AnimatedFavoriteButton
 import com.bitey.app.core.ui.component.MorphingSearchBar
 import com.bitey.app.core.ui.neumorphic.minimalistCard
 import com.bitey.app.core.ui.theme.BiteyOrange
+import com.bitey.app.core.ui.theme.BrandHeaderMedium
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 
 @Composable
@@ -64,7 +65,7 @@ fun FootprintsTopBar(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "Culinary Map",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                style = BrandHeaderMedium,
                                 color = theme.inkPrimary
                             )
                             Spacer(modifier = Modifier.width(8.dp))

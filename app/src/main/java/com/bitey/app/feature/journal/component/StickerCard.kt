@@ -88,7 +88,7 @@ fun StickerCard(
                     Icon(
                         imageVector = if (entry.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                         contentDescription = "Toggle Favorite",
-                        tint = if (entry.isFavorite) BiteyOrange else theme.inkMuted,
+                        tint = if (entry.isFavorite) com.bitey.app.core.ui.theme.BiteyRed else theme.inkMuted,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -108,38 +108,20 @@ fun StickerCard(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                val mealLabel = entry.mealType.name.lowercase().replaceFirstChar { it.uppercase() }
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(theme.surfaceVariant)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = mealLabel,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = theme.inkSecondary,
-                        fontSize = 11.sp
-                    )
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Rounded.Star,
-                        contentDescription = null,
-                        tint = BiteyOrange,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                        text = String.format(Locale.US, "%.1f", entry.rating),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = theme.inkPrimary
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Rounded.Star,
+                    contentDescription = null,
+                    tint = BiteyOrange,
+                    modifier = Modifier.size(13.dp)
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Text(
+                    text = String.format(Locale.US, "%.1f", entry.rating),
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = theme.inkPrimary
+                )
             }
 
             entry.locationName?.let { loc ->

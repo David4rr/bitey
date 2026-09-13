@@ -105,4 +105,57 @@ object ImageTransformUtils {
             out.flush()
         }
     }
+
+    /**
+     * Finds the tight non-transparent bounding box of an image and crops it,
+     * removing all empty transparent margins so the subject fills its layout bounds.
+     */
+    fun cropTransparentBounds(bitmap: Bitmap, paddingPx: Int = 4): Bitmap {
+        val width = bitmap.width
+        val height = bitmap.height
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        var minX = width
+        var minY = height
+        var maxX = -1
+        var maxY = -1
+
+        for (y in 0 until height) {
+            val rowOffset = y * width
+            for (x in 0 until width) {
+                val alpha = (pixels[rowOffset + x] ushr 24) and 0xFF
+                if (alpha > 12) {
+                    if (x < minX) minX = x
+                    if (x > maxX) maxX = x
+                    if (y < minY) minY = y
+                    if (y > maxY) maxY = y
+                }
+            }
+        }
+
+        if (maxX < minX || maxY < minY) return bitmap
+
+        val cropX = (minX - paddingPx).coerceAtLeast(0)
+        val cropY = (minY - paddingPx).coerceAtLeast(0)
+        val cropW = (maxX - cropX + 1 + paddingPx).coerceAtMost(width - cropX)
+        val cropH = (maxY - cropY + 1 + paddingPx).coerceAtMost(height - cropY)
+
+        return if (cropX == 0 && cropY == 0 && cropW == width && cropH == height) {
+            bitmap
+        } else {
+            Bitmap.createBitmap(bitmap, cropX, cropY, cropW, cropH)
+        }
+    }
+}
+
+/**
+ * Coil Transformation that automatically removes empty transparent borders from stickers.
+ */
+class CropTransparentTransformation : coil.transform.Transformation {
+    override val cacheKey: String = "CropTransparentTransformation"
+
+    override suspend fun transform(input: Bitmap, size: coil.size.Size): Bitmap {
+        return ImageTransformUtils.cropTransparentBounds(input)
+    }
 }

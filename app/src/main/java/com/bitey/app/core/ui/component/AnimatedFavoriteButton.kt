@@ -32,6 +32,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.unit.dp
 import com.bitey.app.core.ui.theme.BiteyOrange
+import com.bitey.app.core.ui.theme.BiteyRed
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import kotlinx.coroutines.launch
 
@@ -51,7 +52,7 @@ fun AnimatedFavoriteButton(
     val rotateAnim = remember { Animatable(0f) }
 
     val iconColor by animateColorAsState(
-        targetValue = if (isFavorite) BiteyOrange else theme.inkMuted,
+        targetValue = if (isFavorite) BiteyRed else theme.inkMuted,
         animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
         label = "favorite_color"
     )

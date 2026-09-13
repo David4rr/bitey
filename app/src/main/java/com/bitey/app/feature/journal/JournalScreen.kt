@@ -22,6 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bitey.app.core.database.model.MealType
 import com.bitey.app.core.ui.component.MorphingSearchBar
 import com.bitey.app.core.ui.theme.BiteyOrange
+import com.bitey.app.core.ui.theme.BrandWordmarkStyle
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.feature.journal.component.*
 
@@ -45,7 +46,7 @@ fun JournalScreen(
             searchQuery = uiState.searchQuery,
             onSearchQueryChange = { viewModel.updateSearchQuery(it) },
             titleContent = {
-                Text(text = "Bitey", style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), color = BiteyOrange)
+                Text(text = "Bitey", style = BrandWordmarkStyle, color = BiteyOrange)
             }
         )
 
@@ -78,7 +79,7 @@ fun JournalScreen(
                             val pagerState = rememberPagerState(pageCount = { uiState.entries.size })
                             HorizontalPager(
                                 state = pagerState,
-                                contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 2.dp, bottom = 68.dp),
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 64.dp),
                                 pageSpacing = 16.dp,
                                 modifier = Modifier.fillMaxSize().clipToBounds()
                             ) { page ->
@@ -142,10 +143,7 @@ fun JournalScreen(
 
             JournalFilterBar(
                 selectedMealType = uiState.selectedMealType,
-                selectedTagId = uiState.selectedTagId,
-                availableTags = uiState.availableTags,
                 onSelectMealType = { viewModel.selectMealType(it) },
-                onSelectTag = { viewModel.selectTag(it) },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
         }
@@ -162,11 +160,15 @@ fun JournalScreen(
         ) {
             JournalDetailSheet(
                 item = item,
+                availableTags = uiState.availableTags,
                 onClose = { viewModel.selectEntryForDetail(null) },
                 onToggleFavorite = { viewModel.toggleFavorite(item.entry) },
                 onDelete = {
                     viewModel.deleteEntry(item.entry)
                     viewModel.selectEntryForDetail(null)
+                },
+                onSaveEntry = { updated, tags ->
+                    viewModel.updateEntry(updated, tags)
                 }
             )
         }

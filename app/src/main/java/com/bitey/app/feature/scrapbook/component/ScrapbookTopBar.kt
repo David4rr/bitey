@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bitey.app.core.ui.theme.BiteyMint
 import com.bitey.app.core.ui.theme.BiteyOrange
+import com.bitey.app.core.ui.theme.BrandHeaderLarge
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.feature.scrapbook.model.CanvasAspectRatio
 
@@ -63,7 +64,7 @@ fun ScrapbookTopBar(
             Column {
                 Text(
                     text = "Story Canvas",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
+                    style = BrandHeaderLarge,
                     color = BiteyOrange
                 )
                 Text(

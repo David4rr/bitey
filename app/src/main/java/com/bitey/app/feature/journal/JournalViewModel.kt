@@ -7,6 +7,7 @@ import com.bitey.app.core.database.dao.TagDao
 import com.bitey.app.core.database.model.MealType
 import com.bitey.app.core.database.model.PlateEntryEntity
 import com.bitey.app.core.database.model.PlateEntryWithTags
+import com.bitey.app.core.database.model.TagEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -94,6 +95,10 @@ class JournalViewModel @Inject constructor(
                 DateGroup(dateLabel = dateLabel, entries = groupEntries)
             }
 
+        val currentDetail = detailEntry?.let { current ->
+            allEntries.find { it.entry.id == current.entry.id } ?: current
+        }
+
         JournalUiState(
             entries = filtered,
             dateGroups = dateGroups,
@@ -105,7 +110,7 @@ class JournalViewModel @Inject constructor(
             availableTags = tags,
             isGridView = filters.isGridView,
             isLoading = false,
-            selectedEntryForDetail = detailEntry
+            selectedEntryForDetail = currentDetail
         )
     }.stateIn(
         scope = viewModelScope,
@@ -171,8 +176,14 @@ class JournalViewModel @Inject constructor(
     }
 
     fun toggleFavorite(entry: PlateEntryEntity) {
+        val newFav = !entry.isFavorite
+        _selectedEntryForDetail.update { current ->
+            if (current?.entry?.id == entry.id) {
+                current.copy(entry = current.entry.copy(isFavorite = newFav))
+            } else current
+        }
         viewModelScope.launch(Dispatchers.IO) {
-            plateEntryDao.updateFavoriteStatus(entry.id, !entry.isFavorite)
+            plateEntryDao.updateFavoriteStatus(entry.id, newFav)
         }
     }
 
@@ -182,6 +193,13 @@ class JournalViewModel @Inject constructor(
             if (_selectedEntryForDetail.value?.entry?.id == entry.id) {
                 _selectedEntryForDetail.value = null
             }
+        }
+    }
+
+    fun updateEntry(entry: PlateEntryEntity, tags: List<TagEntity>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            plateEntryDao.updateEntryWithTags(entry, tags, tagDao)
+            _selectedEntryForDetail.value = PlateEntryWithTags(entry, tags)
         }
     }
 }

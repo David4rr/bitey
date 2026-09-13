@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bitey.app.core.ui.theme.BiteyOrange
+import com.bitey.app.core.ui.theme.BrandHeaderMedium
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 
 @Composable
@@ -60,7 +61,7 @@ fun ProfileHeader(modifier: Modifier = Modifier) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "Culinary Explorer",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    style = BrandHeaderMedium,
                     color = theme.inkPrimary
                 )
                 Spacer(modifier = Modifier.width(8.dp))

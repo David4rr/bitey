@@ -43,34 +43,18 @@ fun BookCoverHeader(
         modifier = modifier.fillMaxWidth()
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            val mealLabel = entry.mealType.label
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(BiteyOrange.copy(alpha = 0.12f))
-                    .padding(horizontal = 7.dp, vertical = 3.dp)
-            ) {
-                Text(
-                    text = mealLabel,
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = BiteyOrange,
-                    fontSize = 10.sp
-                )
-            }
-
             if (entry.rating > 0f) {
-                Spacer(modifier = Modifier.width(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Rounded.Star,
                         contentDescription = "Rating",
                         tint = BiteyWarmYellow,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(3.dp))
                     Text(
                         text = String.format(Locale.US, "%.1f", entry.rating),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                         color = theme.inkPrimary
                     )
                 }

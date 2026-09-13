@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.bitey.app.core.image.CropTransparentTransformation
+import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -50,7 +52,7 @@ fun GravitySticker(
     val scope = rememberCoroutineScope()
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
 
-    val stickerSizeDp = 150.dp
+    val stickerSizeDp = 195.dp
     val stickerPx = with(density) { stickerSizeDp.toPx() }
 
     var dragX by remember { mutableFloatStateOf(0f) }
@@ -59,10 +61,15 @@ fun GravitySticker(
     var isDragging by remember { mutableStateOf(false) }
     var tiltOffset by remember { mutableFloatStateOf(0f) }
 
-    val imageRequest = remember(imageFile) {
+    val imageRequest = remember(imageFile, isStickerMode) {
         ImageRequest.Builder(context)
             .data(imageFile)
-            .size(450, 450)
+            .apply {
+                if (isStickerMode) {
+                    transformations(CropTransparentTransformation())
+                }
+            }
+            .size(600, 600)
             .crossfade(false)
             .build()
     }
@@ -166,7 +173,9 @@ fun GravitySticker(
                 AsyncImage(
                     model = imageRequest,
                     contentDescription = contentDescription,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .dieCutStickerEffect(),
                     contentScale = ContentScale.Fit
                 )
             } else {

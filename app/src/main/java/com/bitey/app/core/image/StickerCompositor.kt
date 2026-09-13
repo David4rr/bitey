@@ -50,16 +50,19 @@ class StickerCompositor @Inject constructor(
         shadowBlurPx: Float = 8f,
         shadowOffsetYPx: Float = 6f
     ): CompositedSticker = withContext(Dispatchers.Default) {
+        val croppedForeground = ImageTransformUtils.cropTransparentBounds(foregroundBitmap)
+        val shouldRecycleCropped = croppedForeground != foregroundBitmap
+
         val margin = (strokeWidthPx + shadowBlurPx + shadowOffsetYPx + 8f).toInt()
-        val outWidth = foregroundBitmap.width + (margin * 2)
-        val outHeight = foregroundBitmap.height + (margin * 2)
+        val outWidth = croppedForeground.width + (margin * 2)
+        val outHeight = croppedForeground.height + (margin * 2)
 
         // 1. Target transparent sticker canvas
         val stickerBitmap = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(stickerBitmap)
 
         // 2. Extract alpha channel from foreground for morphological dilation
-        val alphaMask = foregroundBitmap.extractAlpha()
+        val alphaMask = croppedForeground.extractAlpha()
 
         // 3. Create intermediate dilated white outline bitmap
         val outlineBitmap = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
@@ -100,11 +103,14 @@ class StickerCompositor @Inject constructor(
         canvas.drawBitmap(outlineBitmap, 0f, 0f, defaultPaint)
 
         // 6. Draw foreground food subject over white outline
-        canvas.drawBitmap(foregroundBitmap, margin.toFloat(), margin.toFloat(), defaultPaint)
+        canvas.drawBitmap(croppedForeground, margin.toFloat(), margin.toFloat(), defaultPaint)
 
         // Clean up temporary bitmaps
         alphaMask.recycle()
         outlineBitmap.recycle()
+        if (shouldRecycleCropped) {
+            croppedForeground.recycle()
+        }
 
         // 7. Save to internal WebP file
         val stickerFile = File(stickersDir, "sticker_${UUID.randomUUID()}.webp")

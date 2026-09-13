@@ -39,9 +39,9 @@ fun HistoryGridSingleCard(
 
     Box(
         modifier = modifier
-            .fillMaxWidth(0.92f)
-            .fillMaxHeight(0.85f)
-            .widthIn(max = 310.dp)
+            .fillMaxWidth(0.96f)
+            .fillMaxHeight(0.88f)
+            .widthIn(max = 360.dp)
             .clip(bookCoverShape)
             .background(theme.surface)
             .border(1.dp, theme.border, bookCoverShape)
@@ -79,11 +79,27 @@ fun HistoryGridSingleCard(
                     onToggleFavorite = onToggleFavorite
                 )
 
+                // Widened Sticker Canvas & Aesthetic Zone
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 8.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    theme.surfaceVariant.copy(alpha = 0.5f),
+                                    theme.surfaceVariant.copy(alpha = 0.2f),
+                                    theme.surface.copy(alpha = 0.05f)
+                                )
+                            )
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = theme.border.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(22.dp)
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     GravitySticker(

@@ -75,4 +75,20 @@ interface PlateEntryDao {
         insertCrossRefs(crossRefs)
         return entryId
     }
+
+    @Transaction
+    suspend fun updateEntryWithTags(
+        entry: PlateEntryEntity,
+        tags: List<TagEntity>,
+        tagDao: TagDao
+    ) {
+        updateEntry(entry)
+        deleteCrossRefsForEntry(entry.id)
+        val tagIds = tags.map { tag ->
+            val existing = tagDao.getTagByName(tag.tagName)
+            existing?.tagId ?: tagDao.insertTag(tag)
+        }
+        val crossRefs = tagIds.map { tagId -> EntryTagCrossRef(entryId = entry.id, tagId = tagId) }
+        insertCrossRefs(crossRefs)
+    }
 }

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import com.bitey.app.core.database.model.TagEntity
 import com.bitey.app.core.ui.neumorphic.minimalistCard
 import com.bitey.app.core.ui.theme.BiteyOrange
+import com.bitey.app.core.ui.theme.BrandHeaderLarge
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.feature.fatetable.FateSourceFilter
 
@@ -61,10 +62,7 @@ fun FateTableHeader(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "Fate's Table",
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = (-0.5).sp
-                            ),
+                            style = BrandHeaderLarge,
                             color = BiteyOrange
                         )
                         Spacer(modifier = Modifier.width(8.dp))

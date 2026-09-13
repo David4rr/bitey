@@ -57,9 +57,9 @@ fun PlateEntryCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .minimalistCard(cornerRadius = 12.dp, elevation = 0.dp)
+            .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(14.dp)
+            .padding(horizontal = 6.dp, vertical = 8.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -93,28 +93,22 @@ fun PlateEntryCard(
                     text = entry.title,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = theme.inkPrimary,
-                    maxLines = 1,
+                    maxLines = if (entry.note.isNullOrBlank()) 2 else 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(3.dp))
-
-                val timeFormat = SimpleDateFormat("h:mm a", Locale.US).format(Date(entry.timestamp))
-                val mealLabel = entry.mealType.name.lowercase().replaceFirstChar { it.uppercase() }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(theme.surfaceVariant)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(text = mealLabel, style = MaterialTheme.typography.labelSmall, color = theme.inkSecondary, fontSize = 11.sp)
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = timeFormat, style = MaterialTheme.typography.bodySmall, color = theme.inkMuted, fontSize = 12.sp)
+                if (!entry.note.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = entry.note,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = theme.inkSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     for (i in 1..5) {
@@ -122,7 +116,7 @@ fun PlateEntryCard(
                             imageVector = Icons.Rounded.Star,
                             contentDescription = null,
                             tint = if (entry.rating >= i) BiteyWarmYellow else theme.inkMuted.copy(alpha = 0.3f),
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(4.dp))
@@ -133,38 +127,71 @@ fun PlateEntryCard(
                     )
 
                     entry.price?.let { price ->
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "${entry.currency} ${price.toInt()}",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = BiteyMint
-                        )
-                    }
-                }
-
-                entry.locationName?.let { loc ->
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Rounded.LocationOn, contentDescription = null, tint = BiteyOrange, modifier = Modifier.size(13.dp))
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(text = loc, style = MaterialTheme.typography.bodySmall, color = theme.inkMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-
-                if (item.tags.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        item.tags.take(3).forEach { tag ->
+                        if (price > 0.0) {
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "#${tag.tagName}",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                                color = BiteyOrange,
-                                fontSize = 11.sp
+                                text = "${entry.currency} ${price.toInt()}",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = BiteyMint
                             )
                         }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                val timeFormat = SimpleDateFormat("h:mm a", Locale.US).format(Date(entry.timestamp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = timeFormat,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = theme.inkMuted,
+                        fontSize = 11.sp
+                    )
+
+                    entry.locationName?.takeIf { it.isNotBlank() }?.let { loc ->
+                        Text(
+                            text = " • ",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = theme.inkMuted,
+                            fontSize = 11.sp
+                        )
+                        Icon(
+                            imageVector = Icons.Rounded.LocationOn,
+                            contentDescription = null,
+                            tint = BiteyOrange,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(
+                            text = loc,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = theme.inkMuted,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                    }
+
+                    if (item.tags.isNotEmpty()) {
+                        Text(
+                            text = " • ",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = theme.inkMuted,
+                            fontSize = 11.sp
+                        )
+                        Text(
+                            text = item.tags.take(2).joinToString(" ") { "#${it.tagName}" },
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                            color = BiteyOrange,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
