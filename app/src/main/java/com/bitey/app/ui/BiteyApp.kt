@@ -30,7 +30,7 @@ fun BiteyApp() {
     val shouldShowBottomBar = currentRoute in listOf(
         Screen.Journal.route,
         Screen.Profile.route
-    )
+    ) && !showCameraSheet
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

@@ -14,6 +14,8 @@ import androidx.compose.ui.unit.dp
 import com.bitey.app.feature.camera.CameraViewfinder
 import java.io.File
 
+import androidx.compose.ui.graphics.RectangleShape
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewEntryCameraSheet(
@@ -23,25 +25,17 @@ fun NewEntryCameraSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(top = 12.dp, bottom = 6.dp)
-                    .width(44.dp)
-                    .height(4.5.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.5f))
-            )
-        },
-        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-        containerColor = Color(0xFF141416),
-        modifier = modifier.fillMaxWidth().fillMaxHeight(0.92f)
+        dragHandle = null,
+        shape = RectangleShape,
+        containerColor = Color.Black,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+        modifier = modifier.fillMaxSize()
     ) {
-        Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))) {
+        Box(modifier = Modifier.fillMaxSize()) {
             CameraViewfinder(
                 onPhotoCaptured = onPhotoCaptured,
                 onClose = onDismiss,
-                applyStatusBarPadding = false,
+                applyStatusBarPadding = true,
                 modifier = Modifier.fillMaxSize()
             )
         }

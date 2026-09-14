@@ -35,7 +35,7 @@ fun CameraViewfinder(
     onClose: () -> Unit,
     onPickFromFile: (() -> Unit)? = null,
     onDoneDishByDish: () -> Unit = {},
-    applyStatusBarPadding: Boolean = false,
+    applyStatusBarPadding: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -138,6 +138,11 @@ fun CameraViewfinder(
             onCapture = {
                 if (isCapturing) return@CameraBottomBar
                 isCapturing = true
+
+                previewViewRef?.display?.rotation?.let { rotation ->
+                    imageCapture.targetRotation = rotation
+                }
+
                 val tempFile = File(context.cacheDir, "raw_capture_${UUID.randomUUID()}.jpg")
                 val outputOptions = ImageCapture.OutputFileOptions.Builder(tempFile).build()
 
@@ -147,7 +152,7 @@ fun CameraViewfinder(
                     object : ImageCapture.OnImageSavedCallback {
                         override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                             coroutineScope.launch(Dispatchers.IO) {
-                                val finalFile = if (selectedRatio == CameraRatio.SQUARE_1_1) cropFileToSquare(tempFile) else tempFile
+                                val finalFile = normalizeAndCropCapturedImage(tempFile, selectedRatio)
                                 withContext(Dispatchers.Main) {
                                     isCapturing = false
                                     onPhotoCaptured(finalFile)

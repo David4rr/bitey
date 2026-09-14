@@ -24,6 +24,8 @@ import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.feature.camera.component.*
 import com.bitey.app.feature.entry.NewEntryViewModel
 
+import androidx.compose.ui.graphics.RectangleShape
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CameraCaptureBottomSheet(
@@ -75,21 +77,13 @@ fun CameraCaptureBottomSheet(
     ModalBottomSheet(
         onDismissRequest = { handleDismissOrSave() },
         sheetState = sheetState,
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(top = 12.dp, bottom = 6.dp)
-                    .width(44.dp)
-                    .height(4.5.dp)
-                    .clip(CircleShape)
-                    .background(if (uiState.step == CaptureFlowStep.REVIEW) theme.border else Color.White.copy(alpha = 0.5f))
-            )
-        },
-        containerColor = if (uiState.step == CaptureFlowStep.REVIEW) theme.background else Color(0xFF141416),
-        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-        modifier = Modifier.fillMaxWidth().fillMaxHeight(0.92f)
+        dragHandle = null,
+        containerColor = if (uiState.step == CaptureFlowStep.REVIEW) theme.background else Color.Black,
+        shape = RectangleShape,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+        modifier = Modifier.fillMaxSize()
     ) {
-        Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))) {
+        Box(modifier = Modifier.fillMaxSize()) {
             when (uiState.step) {
                 CaptureFlowStep.CAMERA -> {
                     if (hasCameraPermission) {
@@ -101,12 +95,14 @@ fun CameraCaptureBottomSheet(
                             onClose = { handleDismissOrSave() },
                             onPickFromFile = { photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                             onDoneDishByDish = { viewModel.finishDishByDishCapture() },
+                            applyStatusBarPadding = true,
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
                         CameraPermissionCard(
                             onRequestPermissions = { permissionsLauncher.launch(permissionsToRequest) },
-                            onPickFromGallery = { photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+                            onPickFromGallery = { photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                            modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
                         )
                     }
                 }
@@ -115,7 +111,8 @@ fun CameraCaptureBottomSheet(
                         sourceFilePath = uiState.processingSourceFile,
                         stickerFilePath = uiState.processingStickerFile,
                         isProcessing = true,
-                        statusText = uiState.segmentationStatusText
+                        statusText = uiState.segmentationStatusText,
+                        modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
                     )
                 }
                 CaptureFlowStep.REVIEW -> {
@@ -126,10 +123,13 @@ fun CameraCaptureBottomSheet(
                         onMealTypeChange = { viewModel.updateMealType(it) },
                         candidates = uiState.candidates,
                         onToggleCandidate = { viewModel.toggleCandidate(it) },
+                        onUpdateCandidateName = { id, name -> viewModel.updateCandidateLabel(id, name) },
+                        onUpdateCandidateMealType = { id, type -> viewModel.updateCandidateMealType(id, type) },
                         onCutItMyselfClick = { viewModel.openManualCutDialog() },
                         onSaveAndClose = { viewModel.saveAllSelectedAndClose(onDismissRequest) },
                         isStickerMode = uiState.isStickerMode,
-                        onStickerModeChange = { viewModel.setStickerMode(it) }
+                        onStickerModeChange = { viewModel.setStickerMode(it) },
+                        modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
                     )
 
                     if (uiState.showManualCutDialog) {

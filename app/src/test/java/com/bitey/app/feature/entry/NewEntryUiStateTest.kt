@@ -52,4 +52,67 @@ class NewEntryUiStateTest {
         val closed = withDialog.copy(showFallbackDialog = false)
         assertFalse(closed.showFallbackDialog)
     }
+
+    @Test
+    fun candidateStickerItem_supportsCustomFoodAndMealTypePerImage() {
+        val item1 = com.bitey.app.feature.camera.CandidateStickerItem(
+            originalFilePath = "/tmp/dish1.jpg",
+            stickerFilePath = "/tmp/dish1_sticker.png",
+            label = "Tonkotsu Ramen",
+            mealType = com.bitey.app.core.database.model.MealType.FOOD
+        )
+        val item2 = com.bitey.app.feature.camera.CandidateStickerItem(
+            originalFilePath = "/tmp/dish2.jpg",
+            stickerFilePath = "/tmp/dish2_sticker.png",
+            label = "Matcha Latte",
+            mealType = com.bitey.app.core.database.model.MealType.DRINK
+        )
+        val item3 = com.bitey.app.feature.camera.CandidateStickerItem(
+            originalFilePath = "/tmp/dish3.jpg",
+            stickerFilePath = "/tmp/dish3_sticker.png",
+            label = "Matcha Mochi",
+            mealType = com.bitey.app.core.database.model.MealType.OTHER
+        )
+
+        assertEquals("Tonkotsu Ramen", item1.label)
+        assertEquals(com.bitey.app.core.database.model.MealType.FOOD, item1.mealType)
+
+        assertEquals("Matcha Latte", item2.label)
+        assertEquals(com.bitey.app.core.database.model.MealType.DRINK, item2.mealType)
+
+        assertEquals("Matcha Mochi", item3.label)
+        assertEquals(com.bitey.app.core.database.model.MealType.OTHER, item3.mealType)
+    }
+
+    @Test
+    fun stateCopy_updatesCandidateListWithIndividualFoodAndMealTypes() {
+        val candidate1 = com.bitey.app.feature.camera.CandidateStickerItem(
+            id = "item-1",
+            originalFilePath = "/path/1.jpg",
+            stickerFilePath = "/path/1.png",
+            label = "Food",
+            mealType = com.bitey.app.core.database.model.MealType.FOOD
+        )
+        val candidate2 = com.bitey.app.feature.camera.CandidateStickerItem(
+            id = "item-2",
+            originalFilePath = "/path/2.jpg",
+            stickerFilePath = "/path/2.png",
+            label = "Drink",
+            mealType = com.bitey.app.core.database.model.MealType.DRINK
+        )
+
+        val state = NewEntryUiState(candidates = listOf(candidate1, candidate2))
+
+        val updatedCandidates = state.candidates.map {
+            if (it.id == "item-1") it.copy(label = "Truffle Fries", mealType = com.bitey.app.core.database.model.MealType.OTHER)
+            else it
+        }
+
+        val updatedState = state.copy(candidates = updatedCandidates)
+
+        assertEquals("Truffle Fries", updatedState.candidates[0].label)
+        assertEquals(com.bitey.app.core.database.model.MealType.OTHER, updatedState.candidates[0].mealType)
+        assertEquals("Drink", updatedState.candidates[1].label)
+        assertEquals(com.bitey.app.core.database.model.MealType.DRINK, updatedState.candidates[1].mealType)
+    }
 }

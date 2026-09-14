@@ -2,6 +2,8 @@ package com.bitey.app.feature.entry
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import androidx.exifinterface.media.ExifInterface
 import com.bitey.app.core.image.CompositedSticker
 import com.bitey.app.core.image.FallbackStickerCropper
 import com.bitey.app.core.image.FoodSubjectSegmenter
@@ -109,7 +111,26 @@ class StickerPipeline @Inject constructor(
             inSampleSize = sampleSize
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
-        return BitmapFactory.decodeFile(file.absolutePath, opts)
+        val decoded = BitmapFactory.decodeFile(file.absolutePath, opts) ?: return null
+
+        val rotationDegrees = runCatching {
+            val exif = ExifInterface(file.absolutePath)
+            when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
+                ExifInterface.ORIENTATION_ROTATE_90, ExifInterface.ORIENTATION_TRANSPOSE -> 90
+                ExifInterface.ORIENTATION_ROTATE_180, ExifInterface.ORIENTATION_FLIP_VERTICAL -> 180
+                ExifInterface.ORIENTATION_ROTATE_270, ExifInterface.ORIENTATION_TRANSVERSE -> 270
+                else -> 0
+            }
+        }.getOrDefault(0)
+
+        return if (rotationDegrees != 0) {
+            val matrix = Matrix().apply { postRotate(rotationDegrees.toFloat()) }
+            Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true).also {
+                if (it != decoded) decoded.recycle()
+            }
+        } else {
+            decoded
+        }
     }
 
     suspend fun generateSticker(
@@ -117,7 +138,7 @@ class StickerPipeline @Inject constructor(
         style: StickerStyle,
         onStatus: (String) -> Unit = {}
     ): StickerGenerationResult = withContext(Dispatchers.IO) {
-        val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+        val bitmap = decodeSampledBitmap(file, maxDim = 1280)
             ?: return@withContext StickerGenerationResult.Failure(
                 IllegalStateException("Unable to read optimized image for segmentation.")
             )
