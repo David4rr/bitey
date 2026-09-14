@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -87,6 +88,16 @@ fun JournalDetailContent(
 
     var isNewTagDialogOpen by remember { mutableStateOf(false) }
     var showPreview by remember { mutableStateOf(false) }
+
+    val individualStickers = remember(entry.extraStickers) { entry.getIndividualStickerPaths() }
+    var selectedStickerIndex by remember(entry.id) { mutableIntStateOf(0) }
+    val currentStickerPath = remember(selectedStickerIndex, entry.stickerImagePath, individualStickers) {
+        if (selectedStickerIndex in individualStickers.indices) {
+            individualStickers[selectedStickerIndex]
+        } else {
+            entry.stickerImagePath ?: entry.fullImagePath
+        }
+    }
 
     val calendar = remember(timestamp) { Calendar.getInstance().apply { timeInMillis = timestamp } }
     val datePickerDialog = remember(timestamp) {
@@ -445,62 +456,58 @@ fun JournalDetailContent(
                 }
             }
 
-            // Right: Pure Prominent Sticker in its Aesthetic Zone
-            Box(
-                modifier = Modifier
-                    .size(165.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        androidx.compose.ui.graphics.Brush.radialGradient(
-                            colors = listOf(
-                                theme.surfaceVariant.copy(alpha = 0.45f),
-                                theme.surfaceVariant.copy(alpha = 0.15f),
-                                androidx.compose.ui.graphics.Color.Transparent
-                            )
-                        )
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = theme.border.copy(alpha = 0.35f),
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { showPreview = true }
-                    ),
-                contentAlignment = Alignment.Center
+            // Right: Prominent Cardless Food Sticker(s) Stack
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                val displayFile = File(
-                    if (isStickerMode && entry.stickerImagePath != null) entry.stickerImagePath else entry.fullImagePath
-                )
-
-                val imageRequest = remember(displayFile, isStickerMode) {
-                    ImageRequest.Builder(context)
-                        .data(displayFile)
-                        .apply {
-                            if (isStickerMode && entry.stickerImagePath != null) {
-                                transformations(CropTransparentTransformation())
-                            }
+                if (individualStickers.size <= 1 || !isStickerMode) {
+                    Box(
+                        modifier = Modifier
+                            .size(165.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { showPreview = true }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val displayFile = File(
+                            if (isStickerMode && entry.stickerImagePath != null) currentStickerPath else entry.fullImagePath
+                        )
+                        val imageRequest = remember(displayFile, isStickerMode) {
+                            ImageRequest.Builder(context)
+                                .data(displayFile)
+                                .apply {
+                                    if (isStickerMode && entry.stickerImagePath != null) {
+                                        transformations(CropTransparentTransformation())
+                                    }
+                                }
+                                .crossfade(true)
+                                .build()
                         }
-                        .crossfade(true)
-                        .build()
+                        AsyncImage(
+                            model = imageRequest,
+                            contentDescription = title,
+                            modifier = Modifier.fillMaxSize().then(
+                                if (isStickerMode && entry.stickerImagePath != null) Modifier.dieCutStickerEffect()
+                                else Modifier.clip(RoundedCornerShape(18.dp))
+                            ),
+                            contentScale = if (isStickerMode && entry.stickerImagePath != null) ContentScale.Fit else ContentScale.Crop
+                        )
+                    }
+                } else {
+                    StickerCarousel(
+                        stickers = individualStickers,
+                        initialIndex = selectedStickerIndex,
+                        onStickerClick = {
+                            selectedStickerIndex = it
+                            showPreview = true
+                        },
+                        onActiveIndexChange = { selectedStickerIndex = it },
+                        modifier = Modifier.size(165.dp)
+                    )
                 }
-
-                AsyncImage(
-                    model = imageRequest,
-                    contentDescription = title,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(
-                            if (isStickerMode && entry.stickerImagePath != null) {
-                                Modifier.dieCutStickerEffect()
-                            } else {
-                                Modifier.clip(RoundedCornerShape(18.dp))
-                            }
-                        ),
-                    contentScale = if (isStickerMode && entry.stickerImagePath != null) ContentScale.Fit else ContentScale.Crop
-                )
             }
         }
 
@@ -682,13 +689,17 @@ fun JournalDetailContent(
     }
 
     if (showPreview) {
-        val stickerFile = entry.stickerImagePath?.let { File(it) } ?: File(entry.fullImagePath)
-        val fullPhotoFile = File(entry.fullImagePath)
+        val tappedPath = if (isStickerMode && individualStickers.isNotEmpty() && selectedStickerIndex in individualStickers.indices) {
+            individualStickers[selectedStickerIndex]
+        } else if (isStickerMode && entry.stickerImagePath != null) {
+            entry.stickerImagePath
+        } else {
+            entry.fullImagePath
+        }
         StickerPreviewDialog(
-            imageFile = stickerFile,
-            fullPhotoFile = fullPhotoFile,
+            imageFile = File(tappedPath),
             title = title,
-            initialIsSticker = isStickerMode && entry.stickerImagePath != null,
+            isSticker = isStickerMode && (entry.stickerImagePath != null || individualStickers.isNotEmpty()),
             onDismiss = { showPreview = false }
         )
     }

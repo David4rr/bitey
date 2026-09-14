@@ -25,6 +25,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -35,12 +36,12 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 /**
- * Ultra-responsive physics sticker.
- * Direct float drag without coroutine thrashing, zero idle frames, downsampled bitmap.
+ * Ultra-responsive modular physics sticker canvas.
+ * Allows assembling each sticker separately with independent drag, gravity drop, and accelerometer tilt.
  */
 @Composable
 fun GravitySticker(
-    imageFile: File,
+    imageFiles: List<File>,
     isStickerMode: Boolean,
     isGravityEnabled: Boolean,
     contentDescription: String?,
@@ -49,145 +50,142 @@ fun GravitySticker(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    val scope = rememberCoroutineScope()
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
-
-    val stickerSizeDp = 195.dp
-    val stickerPx = with(density) { stickerSizeDp.toPx() }
-
-    var dragX by remember { mutableFloatStateOf(0f) }
-    var dragY by remember { mutableFloatStateOf(0f) }
-    val dropBounceY = remember { Animatable(0f) }
-    var isDragging by remember { mutableStateOf(false) }
     var tiltOffset by remember { mutableFloatStateOf(0f) }
 
-    val imageRequest = remember(imageFile, isStickerMode) {
-        ImageRequest.Builder(context)
-            .data(imageFile)
-            .apply {
-                if (isStickerMode) {
-                    transformations(CropTransparentTransformation())
-                }
-            }
-            .size(600, 600)
-            .crossfade(false)
-            .build()
-    }
-
-    LaunchedEffect(isGravityEnabled) {
-        if (isGravityEnabled) {
-            dropBounceY.snapTo(-80f)
-            dropBounceY.animateTo(
-                targetValue = 0f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessLow
-                )
-            )
-        } else {
-            tiltOffset = 0f
-            dropBounceY.snapTo(0f)
-        }
-    }
-
     DisposableEffect(context, isGravityEnabled) {
-        if (!isGravityEnabled) {
-            onDispose { }
-        } else {
+        if (!isGravityEnabled) onDispose { }
+        else {
             val sm = context.applicationContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
             val sensor = sm?.getDefaultSensor(Sensor.TYPE_GRAVITY) ?: sm?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-            if (sensor == null || sm == null) {
-                onDispose { }
-            } else {
-                val listener = object : SensorEventListener {
-                    override fun onSensorChanged(event: SensorEvent?) {
-                        if (event == null) return
-                        val rawX = -event.values[0]
-                        tiltOffset += (rawX * 3.5f - tiltOffset) * 0.15f
-                    }
-                    override fun onAccuracyChanged(s: Sensor?, a: Int) {}
-                }
-                sm.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
-                onDispose { sm.unregisterListener(listener) }
+            val listener = object : SensorEventListener {
+                override fun onSensorChanged(e: SensorEvent?) { e?.values?.get(0)?.let { tiltOffset += (-it * 3.5f - tiltOffset) * 0.15f } }
+                override fun onAccuracyChanged(s: Sensor?, a: Int) {}
             }
+            if (sensor != null) sm?.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
+            onDispose { if (sensor != null) sm?.unregisterListener(listener) }
         }
     }
 
-    val dragScale by animateFloatAsState(
-        targetValue = if (isDragging) 1.07f else 1.0f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "stickerScale"
-    )
-
-    val maxDragX = ((containerSize.width - stickerPx) / 2f).coerceAtLeast(15f)
-    val maxDragY = ((containerSize.height - stickerPx) / 2f).coerceAtLeast(25f)
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .onSizeChanged { containerSize = it },
-        contentAlignment = Alignment.Center
-    ) {
-        val currentTilt = if (isGravityEnabled) tiltOffset.coerceIn(-maxDragX * 0.35f, maxDragX * 0.35f) else 0f
-        val currentRotation = if (isGravityEnabled) (dragX * 0.05f + currentTilt * 0.5f).coerceIn(-14f, 14f) else (dragX * 0.03f).coerceIn(-8f, 8f)
-
-        Box(
-            modifier = Modifier
-                .size(stickerSizeDp)
-                .graphicsLayer {
-                    translationX = dragX + currentTilt
-                    translationY = dragY + dropBounceY.value
-                    rotationZ = currentRotation
-                    scaleX = dragScale
-                    scaleY = dragScale
+    Box(modifier = modifier.fillMaxSize().onSizeChanged { containerSize = it }, contentAlignment = Alignment.Center) {
+        val count = imageFiles.size
+        val stickerSizeDp = if (count == 1) 195.dp else if (count == 2) 145.dp else if (count == 3) 125.dp else 110.dp
+        imageFiles.forEachIndexed { index, file ->
+            val initialOffset = when (count) {
+                1 -> Pair(0f, 0f)
+                2 -> if (index == 0) Pair(-38f * density.density, 10f * density.density) else Pair(38f * density.density, -10f * density.density)
+                3 -> when (index) {
+                    0 -> Pair(0f, -32f * density.density)
+                    1 -> Pair(-42f * density.density, 30f * density.density)
+                    else -> Pair(42f * density.density, 26f * density.density)
                 }
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = { onClick() })
+                else -> {
+                    val a = (index * 2 * Math.PI / count) - Math.PI / 2
+                    Pair((40.0 * Math.cos(a) * density.density).toFloat(), (40.0 * Math.sin(a) * density.density).toFloat())
                 }
-                .pointerInput(maxDragX, maxDragY, isGravityEnabled) {
-                    val onRelease = {
-                        isDragging = false
-                        if (isGravityEnabled) {
-                            scope.launch {
-                                val startY = dragY
-                                dragY = 0f
-                                dropBounceY.snapTo(startY)
-                                dropBounceY.animateTo(0f, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow))
-                            }
-                        }
-                    }
-                    detectDragGestures(
-                        onDragStart = { isDragging = true },
-                        onDragEnd = { onRelease() },
-                        onDragCancel = { onRelease() }
-                    ) { change, dragAmount ->
-                        change.consume()
-                        dragX = (dragX + dragAmount.x).coerceIn(-maxDragX, maxDragX)
-                        val maxY = if (isGravityEnabled) 15f else maxDragY
-                        dragY = (dragY + dragAmount.y).coerceIn(-maxDragY, maxY)
-                    }
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            if (isStickerMode) {
-                AsyncImage(
-                    model = imageRequest,
-                    contentDescription = contentDescription,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .dieCutStickerEffect(),
-                    contentScale = ContentScale.Fit
-                )
-            } else {
-                AsyncImage(
-                    model = imageRequest,
-                    contentDescription = contentDescription,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(14.dp)),
-                    contentScale = ContentScale.Crop
-                )
             }
+            ModularStickerItem(
+                file = file, initialOffset = initialOffset, stickerSizeDp = stickerSizeDp,
+                containerSize = containerSize, tiltOffset = tiltOffset, isGravityEnabled = isGravityEnabled,
+                isStickerMode = isStickerMode, contentDescription = contentDescription, onClick = onClick
+            )
         }
     }
 }
+
+@Composable
+private fun ModularStickerItem(
+    file: File,
+    initialOffset: Pair<Float, Float>,
+    stickerSizeDp: Dp,
+    containerSize: IntSize,
+    tiltOffset: Float,
+    isGravityEnabled: Boolean,
+    isStickerMode: Boolean,
+    contentDescription: String?,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val stickerPx = with(density) { stickerSizeDp.toPx() }
+
+    var dragX by remember { mutableFloatStateOf(initialOffset.first) }
+    var dragY by remember { mutableFloatStateOf(initialOffset.second) }
+    val dropBounceY = remember { Animatable(initialOffset.second) }
+    var isDragging by remember { mutableStateOf(false) }
+
+    val maxDragX = ((containerSize.width - stickerPx) / 2f).coerceAtLeast(15f)
+    val maxDragY = ((containerSize.height - stickerPx) / 2f).coerceAtLeast(25f)
+    val floorY = if (containerSize.height > 0) ((containerSize.height - stickerPx) / 2f - with(density) { 8.dp.toPx() }).coerceAtLeast(0f) else 0f
+
+    LaunchedEffect(isGravityEnabled, floorY) {
+        if (isGravityEnabled && floorY > 0f) {
+            dropBounceY.snapTo(dragY)
+            dropBounceY.animateTo(floorY, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow))
+            dragY = floorY
+        } else if (!isGravityEnabled) {
+            dropBounceY.snapTo(dragY)
+            dropBounceY.animateTo(initialOffset.second, spring(Spring.DampingRatioLowBouncy, Spring.StiffnessMediumLow))
+            dragY = initialOffset.second
+            dragX = initialOffset.first
+        }
+    }
+
+    val dragScale by animateFloatAsState(if (isDragging) 1.08f else 1.0f, spring(stiffness = Spring.StiffnessMediumLow), label = "dragScale")
+    val currentTilt = if (isGravityEnabled) tiltOffset.coerceIn(-maxDragX * 0.35f, maxDragX * 0.35f) else 0f
+    val currentRotation = (dragX * 0.05f + currentTilt * 0.5f).coerceIn(-14f, 14f)
+
+    val imageRequest = remember(file, isStickerMode) {
+        ImageRequest.Builder(context).data(file)
+            .apply { if (isStickerMode) transformations(CropTransparentTransformation()) }
+            .size(500, 500).crossfade(false).build()
+    }
+
+    Box(
+        modifier = Modifier.size(stickerSizeDp)
+            .graphicsLayer {
+                translationX = dragX + currentTilt
+                translationY = if (isDragging) dragY else dropBounceY.value
+                rotationZ = currentRotation
+                scaleX = dragScale; scaleY = dragScale
+            }
+            .pointerInput(Unit) { detectTapGestures(onTap = { onClick() }) }
+            .pointerInput(maxDragX, maxDragY, isGravityEnabled, floorY) {
+                val onRelease = {
+                    isDragging = false
+                    scope.launch {
+                        if (isGravityEnabled) {
+                            dropBounceY.snapTo(dragY)
+                            dropBounceY.animateTo(floorY, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow))
+                            dragY = floorY
+                        } else dropBounceY.snapTo(dragY)
+                    }
+                }
+                detectDragGestures(onDragStart = { isDragging = true }, onDragEnd = { onRelease() }, onDragCancel = { onRelease() }) { change, dragAmount ->
+                    change.consume()
+                    dragX = (dragX + dragAmount.x).coerceIn(-maxDragX, maxDragX)
+                    dragY = (dragY + dragAmount.y).coerceIn(-maxDragY, if (isGravityEnabled) floorY else maxDragY)
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        AsyncImage(
+            model = imageRequest,
+            contentDescription = contentDescription,
+            modifier = Modifier.fillMaxSize().then(if (isStickerMode) Modifier.dieCutStickerEffect() else Modifier.clip(RoundedCornerShape(14.dp))),
+            contentScale = if (isStickerMode) ContentScale.Fit else ContentScale.Crop,
+            alignment = if (isGravityEnabled) Alignment.BottomCenter else Alignment.Center
+        )
+    }
+}
+
+@Composable
+fun GravitySticker(
+    imageFile: File,
+    isStickerMode: Boolean,
+    isGravityEnabled: Boolean,
+    contentDescription: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) = GravitySticker(listOf(imageFile), isStickerMode, isGravityEnabled, contentDescription, onClick, modifier)

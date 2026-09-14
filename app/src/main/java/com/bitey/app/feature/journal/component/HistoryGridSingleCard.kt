@@ -12,6 +12,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import com.bitey.app.core.database.model.PlateEntryWithTags
+import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import java.io.File
 import java.text.SimpleDateFormat
@@ -28,8 +29,13 @@ fun HistoryGridSingleCard(
 ) {
     val entry = item.entry
     val theme = LocalNeumorphicTheme.current
-    val imageFile = remember(entry) {
-        File(if (entry.isStickerMode && entry.stickerImagePath != null) entry.stickerImagePath else entry.fullImagePath)
+    val stickers = remember(entry) { entry.getIndividualStickerPaths() }
+    val imageFiles = remember(entry, stickers) {
+        if (stickers.isNotEmpty() && entry.isStickerMode && entry.stickerImagePath != null) {
+            stickers.map { File(it) }
+        } else {
+            listOf(File(entry.fullImagePath))
+        }
     }
     val dateFormat = remember { SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()) }
     val formattedDate = remember(entry.timestamp) { dateFormat.format(Date(entry.timestamp)) }
@@ -103,7 +109,7 @@ fun HistoryGridSingleCard(
                     contentAlignment = Alignment.Center
                 ) {
                     GravitySticker(
-                        imageFile = imageFile,
+                        imageFiles = imageFiles,
                         isStickerMode = entry.isStickerMode && entry.stickerImagePath != null,
                         isGravityEnabled = isGravityEnabled && isCurrentPage,
                         contentDescription = entry.title,

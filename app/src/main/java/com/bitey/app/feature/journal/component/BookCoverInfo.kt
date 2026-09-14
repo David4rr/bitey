@@ -1,5 +1,7 @@
 package com.bitey.app.feature.journal.component
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,6 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,29 +65,28 @@ fun BookCoverHeader(
         }
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val badgeBg by animateColorAsState(targetValue = if (isGravityEnabled) BiteyOrange.copy(alpha = 0.14f) else theme.surfaceVariant.copy(alpha = 0.5f), animationSpec = tween(200), label = "grav_bg")
+            val badgeBorder by animateColorAsState(targetValue = if (isGravityEnabled) BiteyOrange.copy(alpha = 0.35f) else theme.border.copy(alpha = 0.45f), animationSpec = tween(200), label = "grav_border")
+            val badgeTint by animateColorAsState(targetValue = if (isGravityEnabled) BiteyOrange else theme.inkMuted, animationSpec = tween(200), label = "grav_tint")
+
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isGravityEnabled) BiteyOrange.copy(alpha = 0.15f) else theme.surfaceVariant.copy(alpha = 0.6f))
-                    .border(1.dp, if (isGravityEnabled) BiteyOrange.copy(alpha = 0.4f) else theme.border.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable(onClick = onToggleGravity)
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                    .width(48.dp)
+                    .height(22.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(badgeBg)
+                    .border(1.dp, badgeBorder, RoundedCornerShape(6.dp))
+                    .clickable(onClick = onToggleGravity),
                 contentAlignment = Alignment.Center
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Rounded.ScreenRotation, contentDescription = null, tint = if (isGravityEnabled) BiteyOrange else theme.inkMuted, modifier = Modifier.size(13.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                    Icon(imageVector = Icons.Rounded.ScreenRotation, contentDescription = if (isGravityEnabled) "Gravity mode" else "Free mode", tint = badgeTint, modifier = Modifier.size(11.dp))
                     Spacer(modifier = Modifier.width(3.dp))
-                    Text(text = if (isGravityEnabled) "GRAV" else "FREE", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), fontSize = 9.sp, color = if (isGravityEnabled) BiteyOrange else theme.inkMuted)
+                    Text(text = if (isGravityEnabled) "GRAV" else "FREE", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp), fontSize = 8.5.sp, color = badgeTint)
                 }
             }
 
-            AnimatedFavoriteButton(
-                isFavorite = entry.isFavorite,
-                onToggle = onToggleFavorite,
-                withContainer = false,
-                iconSize = 22.dp,
-                containerSize = 28.dp
-            )
+            AnimatedFavoriteButton(isFavorite = entry.isFavorite, onToggle = onToggleFavorite, withContainer = false, iconSize = 20.dp, containerSize = 24.dp)
         }
     }
 }

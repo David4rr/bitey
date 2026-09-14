@@ -127,7 +127,9 @@ fun CameraCaptureBottomSheet(
                         candidates = uiState.candidates,
                         onToggleCandidate = { viewModel.toggleCandidate(it) },
                         onCutItMyselfClick = { viewModel.openManualCutDialog() },
-                        onSaveAndClose = { viewModel.saveAllSelectedAndClose(onDismissRequest) }
+                        onSaveAndClose = { viewModel.saveAllSelectedAndClose(onDismissRequest) },
+                        isStickerMode = uiState.isStickerMode,
+                        onStickerModeChange = { viewModel.setStickerMode(it) }
                     )
 
                     if (uiState.showManualCutDialog) {

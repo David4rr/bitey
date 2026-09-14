@@ -12,6 +12,9 @@ import com.bitey.app.core.database.model.PlateEntryEntity
 import com.bitey.app.core.database.model.SavedCollageEntity
 import com.bitey.app.core.database.model.TagEntity
 
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+
 @Database(
     entities = [
         PlateEntryEntity::class,
@@ -19,7 +22,7 @@ import com.bitey.app.core.database.model.TagEntity
         EntryTagCrossRef::class,
         SavedCollageEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(BiteyTypeConverters::class)
@@ -27,4 +30,12 @@ abstract class BiteyDatabase : RoomDatabase() {
     abstract fun plateEntryDao(): PlateEntryDao
     abstract fun tagDao(): TagDao
     abstract fun savedCollageDao(): SavedCollageDao
+
+    companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE plate_entries ADD COLUMN extraStickers TEXT DEFAULT NULL")
+            }
+        }
+    }
 }

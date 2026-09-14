@@ -27,6 +27,7 @@ object DatabaseModule {
             BiteyDatabase::class.java,
             "bitey_database.db"
         )
+            .addMigrations(BiteyDatabase.MIGRATION_1_2)
             .fallbackToDestructiveMigration()
             .build()
     }

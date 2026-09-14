@@ -28,5 +28,20 @@ data class PlateEntryEntity(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val locationName: String? = null,
-    val mealType: MealType = MealType.FOOD
-)
+    val mealType: MealType = MealType.FOOD,
+    val extraStickers: String? = null
+) {
+    fun getAllStickerPaths(): List<String> {
+        val list = mutableListOf<String>()
+        stickerImagePath?.let { list.add(it) }
+        extraStickers?.split("|")?.filter { it.isNotBlank() && it != stickerImagePath }?.let {
+            list.addAll(it)
+        }
+        return list
+    }
+
+    fun getIndividualStickerPaths(): List<String> {
+        val extras = extraStickers?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
+        return if (extras.isNotEmpty()) extras else listOfNotNull(stickerImagePath)
+    }
+}

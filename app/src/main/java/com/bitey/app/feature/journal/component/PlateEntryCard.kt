@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -83,6 +84,25 @@ fun PlateEntryCard(
                         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
                         contentScale = ContentScale.Crop
                     )
+                }
+
+                val stickerCount = remember(entry) { entry.getIndividualStickerPaths().size }
+                if (stickerCount > 1) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(2.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(BiteyOrange)
+                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            text = "$stickerCount",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White,
+                            fontSize = 9.sp
+                        )
+                    }
                 }
             }
 

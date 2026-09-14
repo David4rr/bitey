@@ -59,13 +59,10 @@ class StickerPipeline @Inject constructor(
                 is SegmentationResult.Success -> {
                     if (segResult.subjectBitmaps.size > 1) {
                         for (subjBmp in segResult.subjectBitmaps) {
-                            runCatching {
-                                stickers.add(stickerCompositor.createDieCutSticker(subjBmp))
-                            }
+                            runCatching { stickers.add(stickerCompositor.createDieCutSticker(subjBmp)) }
                         }
-                    }
-                    runCatching {
-                        stickers.add(stickerCompositor.createDieCutSticker(segResult.foregroundBitmap))
+                    } else {
+                        runCatching { stickers.add(stickerCompositor.createDieCutSticker(segResult.foregroundBitmap)) }
                     }
                 }
                 else -> {

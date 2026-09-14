@@ -229,4 +229,41 @@ class RevisionFeaturesTest {
             assertTrue("Card has aesthetic zone radial gradient mat", content.contains("Brush.radialGradient"))
         }
     }
+
+    @Test
+    fun stickerCarousel_activeEnlargeAdjacentShrinkContract() {
+        val carouselFile = java.io.File("src/main/java/com/bitey/app/feature/journal/component/StickerCarousel.kt")
+        assertTrue("StickerCarousel file exists", carouselFile.exists())
+        val carouselContent = carouselFile.readText()
+        assertTrue("Uses HorizontalPager", carouselContent.contains("HorizontalPager"))
+        assertTrue("Uses lerp for smooth scale and alpha transition", carouselContent.contains("lerp("))
+        assertTrue("Scales active and shrinks adjacent", carouselContent.contains("scaleX") && carouselContent.contains("scaleY"))
+        assertTrue("Die-cut sticker presentation", carouselContent.contains("dieCutStickerEffect()"))
+
+        val contentFile = java.io.File("src/main/java/com/bitey/app/feature/journal/component/JournalDetailContent.kt")
+        val detailContent = contentFile.readText()
+        assertTrue("JournalDetailContent uses StickerCarousel", detailContent.contains("StickerCarousel("))
+        assertFalse("Fullscreen button removed from carousel", carouselContent.contains("Icons.Rounded.Fullscreen"))
+        assertFalse("Fullscreen button removed from detail sticker box", detailContent.contains("Icons.Rounded.Fullscreen"))
+        assertFalse("Text below indicator removed", carouselContent.contains("Tap to view"))
+        assertTrue("Indicator positioned inside container", carouselContent.contains("Alignment.BottomCenter"))
+
+        val previewFile = java.io.File("src/main/java/com/bitey/app/feature/journal/component/StickerPreviewDialog.kt")
+        val previewText = previewFile.readText()
+        assertFalse("StickerPreviewDialog does not use carousel", previewText.contains("HorizontalPager"))
+        assertTrue("StickerPreviewDialog uses scaleIn shared animation", previewText.contains("scaleIn("))
+        assertFalse("StickerPreviewDialog does not show full photo toggle", previewText.contains("View Full Photo"))
+    }
+
+    @Test
+    fun newEntry_storageEfficiencyAndChoiceContract() {
+        val vmFile = java.io.File("src/main/java/com/bitey/app/feature/entry/NewEntryViewModel.kt")
+        val vmText = vmFile.readText()
+        assertTrue("Has setStickerMode", vmText.contains("setStickerMode"))
+        assertTrue("Deletes unused files for storage efficiency", vmText.contains(".delete()"))
+
+        val reviewFile = java.io.File("src/main/java/com/bitey/app/feature/camera/component/NewEntryReviewView.kt")
+        val reviewText = reviewFile.readText()
+        assertTrue("Allows choosing Sticker Mode or Full Photo", reviewText.contains("Sticker Mode") && reviewText.contains("Full Photo"))
+    }
 }

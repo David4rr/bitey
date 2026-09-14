@@ -9,3 +9,12 @@ build/
 .externalNativeBuild
 .cxx
 local.properties
+
+# Agent files
+AGENTS.md
+.agents/
+.cursor/
+.clinerules/
+.windsurf/
+.opencode/
+.github/

@@ -47,19 +47,13 @@ class NewEntryViewModel @Inject constructor(
 
     fun updateMealType(mealType: MealType) {
         _uiState.update { current ->
-            val newName = if (current.dishName.isBlank() || MealType.entries.any { it.label == current.dishName }) {
-                mealType.label
-            } else current.dishName
+            val newName = if (current.dishName.isBlank() || MealType.entries.any { it.label == current.dishName }) mealType.label else current.dishName
             current.copy(mealType = mealType, dishName = newName)
         }
     }
 
     fun toggleCandidate(id: String) {
-        _uiState.update { current ->
-            current.copy(candidates = current.candidates.map {
-                if (it.id == id) it.copy(isSelected = !it.isSelected) else it
-            })
-        }
+        _uiState.update { current -> current.copy(candidates = current.candidates.map { if (it.id == id) it.copy(isSelected = !it.isSelected) else it }) }
     }
 
     fun onPhotoCaptured(file: File) {
@@ -111,12 +105,8 @@ class NewEntryViewModel @Inject constructor(
             fetchLocation()
             val stickers = stickerPipeline.createStickersForMultiSubject(file)
             val list = if (stickers.isNotEmpty()) {
-                stickers.mapIndexed { idx, s ->
-                    CandidateStickerItem(originalFilePath = file.absolutePath, stickerFilePath = s.file.absolutePath, label = "Dish ${idx + 1}")
-                }
-            } else {
-                listOf(CandidateStickerItem(originalFilePath = file.absolutePath, stickerFilePath = file.absolutePath))
-            }
+                stickers.mapIndexed { idx, s -> CandidateStickerItem(originalFilePath = file.absolutePath, stickerFilePath = s.file.absolutePath, label = "Dish ${idx + 1}") }
+            } else listOf(CandidateStickerItem(originalFilePath = file.absolutePath, stickerFilePath = file.absolutePath))
             _uiState.update { it.copy(processingStickerFile = list.firstOrNull()?.stickerFilePath, segmentationStatusText = "Voila! Sticker ready ✨") }
             kotlinx.coroutines.delay(950)
             _uiState.update { it.copy(step = CaptureFlowStep.REVIEW, candidates = list) }
@@ -144,6 +134,9 @@ class NewEntryViewModel @Inject constructor(
         }
     }
 
+    fun setStickerMode(enabled: Boolean) { _uiState.update { it.copy(isStickerMode = enabled) } }
+    fun toggleStickerMode() { _uiState.update { it.copy(isStickerMode = !it.isStickerMode) } }
+
     fun saveAllSelectedAndClose(onSuccess: () -> Unit) {
         val state = _uiState.value
         val toSave = state.candidates.filter { it.isSelected }
@@ -153,19 +146,38 @@ class NewEntryViewModel @Inject constructor(
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
-            toSave.forEachIndexed { idx, item ->
-                val title = if (toSave.size > 1 && idx > 0) "${state.dishName} #${idx + 1}" else state.dishName
-                plateEntryDao.insertEntryWithTags(
-                    entry = PlateEntryEntity(
-                        title = title, note = null, fullImagePath = item.originalFilePath,
-                        stickerImagePath = item.stickerFilePath, thumbnailPath = item.stickerFilePath,
-                        isStickerMode = true, rating = 5.0f, price = null, currency = "IDR", isFavorite = false,
-                        timestamp = System.currentTimeMillis(), latitude = state.latitude, longitude = state.longitude,
-                        locationName = state.locationName, mealType = state.mealType
-                    ),
-                    tags = emptyList(), tagDao = tagDao
-                )
+            val primary = toSave.first()
+            val isSticker = state.isStickerMode
+            val extraPaths = if (toSave.size > 1) {
+                toSave.joinToString("|") { if (isSticker) it.stickerFilePath else it.originalFilePath }
+            } else null
+
+            plateEntryDao.insertEntryWithTags(
+                entry = PlateEntryEntity(
+                    title = state.dishName, note = null,
+                    fullImagePath = if (isSticker) primary.stickerFilePath else primary.originalFilePath,
+                    stickerImagePath = if (isSticker) primary.stickerFilePath else null,
+                    thumbnailPath = if (isSticker) primary.stickerFilePath else primary.originalFilePath,
+                    isStickerMode = isSticker,
+                    rating = 5.0f, price = null, currency = "IDR", isFavorite = false,
+                    timestamp = System.currentTimeMillis(), latitude = state.latitude, longitude = state.longitude,
+                    locationName = state.locationName, mealType = state.mealType, extraStickers = extraPaths
+                ),
+                tags = emptyList(), tagDao = tagDao
+            )
+
+            state.candidates.forEach { item ->
+                if (isSticker && item.originalFilePath != item.stickerFilePath) {
+                    try { File(item.originalFilePath).delete() } catch (_: Exception) {}
+                } else if (!isSticker && item.originalFilePath != item.stickerFilePath) {
+                    try { File(item.stickerFilePath).delete() } catch (_: Exception) {}
+                }
+                if (!item.isSelected) {
+                    try { File(item.originalFilePath).delete() } catch (_: Exception) {}
+                    try { File(item.stickerFilePath).delete() } catch (_: Exception) {}
+                }
             }
+
             withContext(Dispatchers.Main) {
                 resetState()
                 onSuccess()
