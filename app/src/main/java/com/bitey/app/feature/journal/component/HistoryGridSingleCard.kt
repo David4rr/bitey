@@ -19,29 +19,23 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import com.bitey.app.feature.journal.JournalPlate
+
 @Composable
-fun HistoryGridSingleCard(
-    item: PlateEntryWithTags,
+fun HistoryGridPlateCard(
+    plate: JournalPlate,
     isCurrentPage: Boolean = true,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val entry = item.entry
     val theme = LocalNeumorphicTheme.current
-    val stickers = remember(entry) { entry.getIndividualStickerPaths() }
-    val imageFiles = remember(entry, stickers) {
-        if (stickers.isNotEmpty() && entry.isStickerMode && entry.stickerImagePath != null) {
-            stickers.map { File(it) }
-        } else {
-            listOf(File(entry.fullImagePath))
-        }
-    }
+    val imageFiles = remember(plate) { plate.allImageFiles }
     val dateFormat = remember { SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()) }
-    val formattedDate = remember(entry.timestamp) { dateFormat.format(Date(entry.timestamp)) }
+    val formattedDate = remember(plate.timestamp) { dateFormat.format(Date(plate.timestamp)) }
     val bookCoverShape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 22.dp, bottomEnd = 22.dp)
 
-    var isGravityEnabled by remember(entry.id) { mutableStateOf(false) }
+    var isGravityEnabled by remember(plate.id) { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -78,8 +72,8 @@ fun HistoryGridSingleCard(
                     .padding(start = 14.dp, end = 16.dp, top = 16.dp, bottom = 18.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                BookCoverHeader(
-                    entry = entry,
+                BookCoverPlateHeader(
+                    plate = plate,
                     isGravityEnabled = isGravityEnabled,
                     onToggleGravity = { isGravityEnabled = !isGravityEnabled },
                     onToggleFavorite = onToggleFavorite
@@ -110,18 +104,43 @@ fun HistoryGridSingleCard(
                 ) {
                     GravitySticker(
                         imageFiles = imageFiles,
-                        isStickerMode = entry.isStickerMode && entry.stickerImagePath != null,
+                        isStickerMode = plate.isStickerMode,
                         isGravityEnabled = isGravityEnabled && isCurrentPage,
-                        contentDescription = entry.title,
+                        contentDescription = plate.title,
                         onClick = onClick
                     )
                 }
 
-                BookCoverBottomInfo(
-                    item = item,
+                BookCoverPlateBottomInfo(
+                    plate = plate,
                     formattedDate = formattedDate
                 )
             }
         }
     }
+}
+
+@Composable
+fun HistoryGridSingleCard(
+    item: PlateEntryWithTags,
+    isCurrentPage: Boolean = true,
+    onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val plate = remember(item) {
+        JournalPlate(
+            id = "plate_${item.entry.id}",
+            venueName = item.entry.locationName,
+            timestamp = item.entry.timestamp,
+            entries = listOf(item)
+        )
+    }
+    HistoryGridPlateCard(
+        plate = plate,
+        isCurrentPage = isCurrentPage,
+        onClick = onClick,
+        onToggleFavorite = onToggleFavorite,
+        modifier = modifier
+    )
 }

@@ -22,7 +22,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         EntryTagCrossRef::class,
         SavedCollageEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(BiteyTypeConverters::class)
@@ -35,6 +35,13 @@ abstract class BiteyDatabase : RoomDatabase() {
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE plate_entries ADD COLUMN extraStickers TEXT DEFAULT NULL")
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE plate_entries ADD COLUMN plateSessionId TEXT DEFAULT NULL")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_plate_entries_plateSessionId ON plate_entries(plateSessionId)")
             }
         }
     }

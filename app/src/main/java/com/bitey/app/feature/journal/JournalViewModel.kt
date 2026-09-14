@@ -30,6 +30,7 @@ class JournalViewModel @Inject constructor(
     private val _selectedMealType = MutableStateFlow<MealType?>(null)
     private val _selectedTagId = MutableStateFlow<Long?>(null)
     private val _isGridView = MutableStateFlow(true)
+    private val _selectedPlateForDetail = MutableStateFlow<JournalPlate?>(null)
     private val _selectedEntryForDetail = MutableStateFlow<PlateEntryWithTags?>(null)
 
     private data class FilterState(
@@ -62,8 +63,9 @@ class JournalViewModel @Inject constructor(
         plateEntryDao.getAllEntriesWithTags(),
         tagDao.getAllTags(),
         filterStateFlow,
-        _selectedEntryForDetail
-    ) { allEntries, tags, filters, detailEntry ->
+        _selectedEntryForDetail,
+        _selectedPlateForDetail
+    ) { allEntries, tags, filters, detailEntry, detailPlate ->
         val trimmedQuery = filters.query.trim()
         val filtered = allEntries.filter { item ->
             // Filter by favorite
@@ -88,19 +90,31 @@ class JournalViewModel @Inject constructor(
 
             true
         }
-        // Group entries chronologically by calendar date
-        val dateGroups = filtered
-            .groupBy { item -> formatDateHeader(item.entry.timestamp) }
-            .map { (dateLabel, groupEntries) ->
-                DateGroup(dateLabel = dateLabel, entries = groupEntries)
+
+        val plates = clusterIntoPlates(filtered)
+
+        // Group plates chronologically by calendar date
+        val dateGroups = plates
+            .groupBy { plate -> formatDateHeader(plate.timestamp) }
+            .map { (dateLabel, groupPlates) ->
+                DateGroup(
+                    dateLabel = dateLabel,
+                    entries = groupPlates.flatMap { it.entries },
+                    plates = groupPlates
+                )
             }
 
-        val currentDetail = detailEntry?.let { current ->
+        val currentDetailEntry = detailEntry?.let { current ->
             allEntries.find { it.entry.id == current.entry.id } ?: current
+        }
+
+        val currentDetailPlate = detailPlate?.let { current ->
+            plates.find { it.id == current.id } ?: current
         }
 
         JournalUiState(
             entries = filtered,
+            plates = plates,
             dateGroups = dateGroups,
             totalEntriesCount = allEntries.size,
             searchQuery = filters.query,
@@ -110,7 +124,8 @@ class JournalViewModel @Inject constructor(
             availableTags = tags,
             isGridView = filters.isGridView,
             isLoading = false,
-            selectedEntryForDetail = currentDetail
+            selectedEntryForDetail = currentDetailEntry,
+            selectedPlateForDetail = currentDetailPlate
         )
     }.stateIn(
         scope = viewModelScope,
@@ -173,6 +188,72 @@ class JournalViewModel @Inject constructor(
 
     fun selectEntryForDetail(entry: PlateEntryWithTags?) {
         _selectedEntryForDetail.value = entry
+    }
+
+    fun selectPlateForDetail(plate: JournalPlate?, selectedDish: PlateEntryWithTags? = null) {
+        _selectedPlateForDetail.value = plate
+        _selectedEntryForDetail.value = selectedDish ?: plate?.entries?.firstOrNull()
+    }
+
+    companion object {
+        fun clusterIntoPlates(entries: List<PlateEntryWithTags>): List<JournalPlate> {
+            val result = mutableListOf<JournalPlate>()
+            val visited = mutableSetOf<Long>()
+
+            for (i in entries.indices) {
+                val current = entries[i]
+                if (current.entry.id in visited) continue
+
+                val plateMembers = mutableListOf(current)
+                visited.add(current.entry.id)
+
+                val currentSessionId = current.entry.plateSessionId
+                val currentVenue = current.entry.locationName?.trim()
+                val currentTimestamp = current.entry.timestamp
+
+                for (j in i + 1 until entries.size) {
+                    val candidate = entries[j]
+                    if (candidate.entry.id in visited) continue
+
+                    val candidateSessionId = candidate.entry.plateSessionId
+                    val candidateVenue = candidate.entry.locationName?.trim()
+                    val candidateTimestamp = candidate.entry.timestamp
+
+                    val isSameSession = currentSessionId != null && candidateSessionId != null && currentSessionId == candidateSessionId
+                    val isSameVenueAndDayTime = !currentVenue.isNullOrBlank() &&
+                        !candidateVenue.isNullOrBlank() &&
+                        currentVenue.equals(candidateVenue, ignoreCase = true) &&
+                        isSameDay(currentTimestamp, candidateTimestamp) &&
+                        kotlin.math.abs(currentTimestamp - candidateTimestamp) <= 2 * 60 * 60 * 1000L
+
+                    if (isSameSession || isSameVenueAndDayTime) {
+                        plateMembers.add(candidate)
+                        visited.add(candidate.entry.id)
+                    }
+                }
+
+                val plateId = currentSessionId ?: "plate_${current.entry.id}"
+                val venue = currentVenue ?: plateMembers.firstOrNull { !it.entry.locationName.isNullOrBlank() }?.entry?.locationName
+                result.add(
+                    JournalPlate(
+                        id = plateId,
+                        venueName = venue,
+                        timestamp = currentTimestamp,
+                        entries = plateMembers
+                    )
+                )
+            }
+
+            return result
+        }
+
+        fun isSameDay(t1: Long, t2: Long): Boolean {
+            val cal1 = java.util.Calendar.getInstance().apply { timeInMillis = t1 }
+            val cal2 = java.util.Calendar.getInstance().apply { timeInMillis = t2 }
+            return cal1.get(java.util.Calendar.ERA) == cal2.get(java.util.Calendar.ERA) &&
+                   cal1.get(java.util.Calendar.YEAR) == cal2.get(java.util.Calendar.YEAR) &&
+                   cal1.get(java.util.Calendar.DAY_OF_YEAR) == cal2.get(java.util.Calendar.DAY_OF_YEAR)
+        }
     }
 
     fun toggleFavorite(entry: PlateEntryEntity) {

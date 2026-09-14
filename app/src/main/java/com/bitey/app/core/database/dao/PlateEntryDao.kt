@@ -42,6 +42,13 @@ interface PlateEntryDao {
     @Query("SELECT * FROM plate_entries WHERE isFavorite = 1 ORDER BY RANDOM() LIMIT :limit")
     fun getRandomFavoriteEntries(limit: Int): Flow<List<PlateEntryEntity>>
 
+    @Query("SELECT * FROM plate_entries WHERE locationName IS NOT NULL AND LOWER(TRIM(locationName)) = LOWER(TRIM(:locationName)) AND timestamp >= :minTimestamp ORDER BY timestamp DESC LIMIT 1")
+    suspend fun findRecentEntryAtVenue(locationName: String, minTimestamp: Long): PlateEntryEntity?
+
+    @Transaction
+    @Query("SELECT * FROM plate_entries WHERE plateSessionId = :sessionId ORDER BY timestamp ASC")
+    fun getEntriesByPlateSessionId(sessionId: String): Flow<List<PlateEntryWithTags>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntry(entry: PlateEntryEntity): Long
 

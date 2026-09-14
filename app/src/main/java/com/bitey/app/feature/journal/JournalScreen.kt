@@ -62,10 +62,10 @@ fun JournalScreen(
 
                 Box(modifier = Modifier.weight(1f).fillMaxHeight().clipToBounds()) {
                     when {
-                        uiState.entries.isEmpty() && uiState.totalEntriesCount == 0 -> {
+                        uiState.plates.isEmpty() && uiState.totalEntriesCount == 0 -> {
                             EmptyJournalPrompt(onCaptureClick = onNavigateToNewEntry)
                         }
-                        uiState.entries.isEmpty() -> {
+                        uiState.plates.isEmpty() -> {
                             NoSearchResultsPrompt(
                                 onClearFilters = {
                                     viewModel.updateSearchQuery("")
@@ -76,14 +76,14 @@ fun JournalScreen(
                             )
                         }
                         uiState.isGridView -> {
-                            val pagerState = rememberPagerState(pageCount = { uiState.entries.size })
+                            val pagerState = rememberPagerState(pageCount = { uiState.plates.size })
                             HorizontalPager(
                                 state = pagerState,
                                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 64.dp),
                                 pageSpacing = 16.dp,
                                 modifier = Modifier.fillMaxSize().clipToBounds()
                             ) { page ->
-                                val item = uiState.entries[page]
+                                val plate = uiState.plates[page]
                                 Box(
                                     modifier = Modifier.fillMaxSize().graphicsLayer {
                                         val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
@@ -95,11 +95,11 @@ fun JournalScreen(
                                     },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    HistoryGridSingleCard(
-                                        item = item,
+                                    HistoryGridPlateCard(
+                                        plate = plate,
                                         isCurrentPage = pagerState.currentPage == page,
-                                        onClick = { viewModel.selectEntryForDetail(item) },
-                                        onToggleFavorite = { viewModel.toggleFavorite(item.entry) }
+                                        onClick = { viewModel.selectPlateForDetail(plate) },
+                                        onToggleFavorite = { viewModel.toggleFavorite(plate.primaryEntry) }
                                     )
                                 }
                             }
@@ -123,16 +123,29 @@ fun JournalScreen(
                                                 color = theme.inkSecondary,
                                                 letterSpacing = 0.5.sp
                                             )
-                                            Text(text = "${group.entries.size} bites", style = MaterialTheme.typography.labelSmall, color = theme.inkMuted, fontSize = 11.sp)
+                                            val totalDishes = group.plates.sumOf { it.entries.size }
+                                            Text(
+                                                text = "$totalDishes bites${if (group.plates.size > 1) " • ${group.plates.size} plates" else ""}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = theme.inkMuted,
+                                                fontSize = 11.sp
+                                            )
                                         }
                                     }
 
-                                    items(group.entries, key = { it.entry.id }) { item ->
-                                        PlateEntryCard(
-                                            item = item,
-                                            onClick = { viewModel.selectEntryForDetail(item) },
-                                            onToggleFavorite = { viewModel.toggleFavorite(item.entry) }
-                                        )
+                                    group.plates.forEach { plate ->
+                                        if (plate.isMergedPlate) {
+                                            item(key = "plate_group_${plate.id}") {
+                                                PlateGroupHeader(plate = plate)
+                                            }
+                                        }
+                                        items(plate.entries, key = { it.entry.id }) { dish ->
+                                            PlateEntryCard(
+                                                item = dish,
+                                                onClick = { viewModel.selectPlateForDetail(plate, dish) },
+                                                onToggleFavorite = { viewModel.toggleFavorite(dish.entry) }
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -152,7 +165,7 @@ fun JournalScreen(
     uiState.selectedEntryForDetail?.let { item ->
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
-            onDismissRequest = { viewModel.selectEntryForDetail(null) },
+            onDismissRequest = { viewModel.selectPlateForDetail(null) },
             sheetState = sheetState,
             containerColor = theme.surface,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
@@ -160,12 +173,13 @@ fun JournalScreen(
         ) {
             JournalDetailSheet(
                 item = item,
+                plate = uiState.selectedPlateForDetail,
                 availableTags = uiState.availableTags,
-                onClose = { viewModel.selectEntryForDetail(null) },
+                onClose = { viewModel.selectPlateForDetail(null) },
                 onToggleFavorite = { viewModel.toggleFavorite(item.entry) },
                 onDelete = {
                     viewModel.deleteEntry(item.entry)
-                    viewModel.selectEntryForDetail(null)
+                    viewModel.selectPlateForDetail(null)
                 },
                 onSaveEntry = { updated, tags ->
                     viewModel.updateEntry(updated, tags)

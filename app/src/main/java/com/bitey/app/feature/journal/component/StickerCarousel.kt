@@ -30,6 +30,7 @@ import kotlin.math.absoluteValue
 fun StickerCarousel(
     stickers: List<String>,
     initialIndex: Int = 0,
+    isStickerMode: Boolean = true,
     onStickerClick: (index: Int) -> Unit = {},
     onActiveIndexChange: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -46,6 +47,12 @@ fun StickerCarousel(
 
     LaunchedEffect(pagerState.currentPage) {
         onActiveIndexChange?.invoke(pagerState.currentPage)
+    }
+
+    LaunchedEffect(initialIndex) {
+        if (pagerState.currentPage != initialIndex && initialIndex in stickers.indices) {
+            pagerState.scrollToPage(initialIndex)
+        }
     }
 
     Box(
@@ -66,10 +73,14 @@ fun StickerCarousel(
             val alpha = lerp(0.60f, 1.0f, fraction)
 
             val file = remember(stickers, page) { File(stickers[page]) }
-            val imageRequest = remember(file) {
+            val imageRequest = remember(file, isStickerMode) {
                 ImageRequest.Builder(context)
                     .data(file)
-                    .transformations(CropTransparentTransformation())
+                    .apply {
+                        if (isStickerMode) {
+                            transformations(CropTransparentTransformation())
+                        }
+                    }
                     .crossfade(true)
                     .build()
             }
@@ -94,8 +105,11 @@ fun StickerCarousel(
                     contentDescription = "Sticker #${page + 1}",
                     modifier = Modifier
                         .fillMaxSize()
-                        .dieCutStickerEffect(),
-                    contentScale = ContentScale.Fit
+                        .then(
+                            if (isStickerMode) Modifier.dieCutStickerEffect()
+                            else Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
+                        ),
+                    contentScale = if (isStickerMode) ContentScale.Fit else ContentScale.Crop
                 )
             }
         }

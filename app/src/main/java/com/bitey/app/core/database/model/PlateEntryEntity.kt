@@ -8,7 +8,8 @@ import androidx.room.PrimaryKey
     tableName = "plate_entries",
     indices = [
         Index(value = ["timestamp"]),
-        Index(value = ["isFavorite"])
+        Index(value = ["isFavorite"]),
+        Index(value = ["plateSessionId"])
     ]
 )
 data class PlateEntryEntity(
@@ -29,7 +30,8 @@ data class PlateEntryEntity(
     val longitude: Double? = null,
     val locationName: String? = null,
     val mealType: MealType = MealType.FOOD,
-    val extraStickers: String? = null
+    val extraStickers: String? = null,
+    val plateSessionId: String? = null
 ) {
     fun getAllStickerPaths(): List<String> {
         val list = mutableListOf<String>()

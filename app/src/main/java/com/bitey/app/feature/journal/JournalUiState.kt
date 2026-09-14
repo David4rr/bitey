@@ -6,11 +6,13 @@ import com.bitey.app.core.database.model.TagEntity
 
 data class DateGroup(
     val dateLabel: String,
-    val entries: List<PlateEntryWithTags>
+    val entries: List<PlateEntryWithTags>,
+    val plates: List<JournalPlate> = emptyList()
 )
 
 data class JournalUiState(
     val entries: List<PlateEntryWithTags> = emptyList(),
+    val plates: List<JournalPlate> = emptyList(),
     val dateGroups: List<DateGroup> = emptyList(),
     val totalEntriesCount: Int = 0,
     val searchQuery: String = "",
@@ -20,5 +22,6 @@ data class JournalUiState(
     val availableTags: List<TagEntity> = emptyList(),
     val isGridView: Boolean = true,
     val isLoading: Boolean = true,
-    val selectedEntryForDetail: PlateEntryWithTags? = null
+    val selectedEntryForDetail: PlateEntryWithTags? = null,
+    val selectedPlateForDetail: JournalPlate? = null
 )

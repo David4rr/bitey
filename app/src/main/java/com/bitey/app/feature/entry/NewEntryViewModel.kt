@@ -193,6 +193,8 @@ class NewEntryViewModel @Inject constructor(
             val storageDir = File(context.filesDir, if (isSticker) "bites/stickers" else "bites/media")
             val currentTime = System.currentTimeMillis()
 
+            val sessionId = java.util.UUID.randomUUID().toString()
+
             toSave.forEachIndexed { idx, item ->
                 val sourcePath = if (isSticker) item.stickerFilePath else item.originalFilePath
                 val dishTitle = item.label.ifBlank { item.mealType.label }
@@ -215,7 +217,8 @@ class NewEntryViewModel @Inject constructor(
                         longitude = state.longitude,
                         locationName = state.locationName,
                         mealType = item.mealType,
-                        extraStickers = null
+                        extraStickers = null,
+                        plateSessionId = sessionId
                     ),
                     tags = emptyList(),
                     tagDao = tagDao

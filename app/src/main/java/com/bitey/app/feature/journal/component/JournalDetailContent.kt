@@ -51,51 +51,83 @@ fun JournalDetailContent(
     availableTags: List<TagEntity>,
     onEntryChange: (PlateEntryEntity, List<TagEntity>) -> Unit,
     modifier: Modifier = Modifier,
+    plate: com.bitey.app.feature.journal.JournalPlate? = null,
     isFavorite: Boolean = item.entry.isFavorite,
     onToggleFavorite: (() -> Unit)? = null,
+    onActiveDishChange: ((PlateEntryWithTags) -> Unit)? = null,
     onClose: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val theme = LocalNeumorphicTheme.current
-    val entry = item.entry
 
-    var title by remember(entry.id) { mutableStateOf(entry.title) }
-    var tempTitle by remember(entry.id) { mutableStateOf(entry.title) }
-    var editingTitle by remember { mutableStateOf(false) }
-
-    var note by remember(entry.id) { mutableStateOf(entry.note ?: "") }
-
-    var rating by remember(entry.id) { mutableFloatStateOf(entry.rating) }
-
-    var priceString by remember(entry.id) {
-        mutableStateOf(entry.price?.let { if (it % 1.0 == 0.0) it.toLong().toString() else it.toString() } ?: "")
+    val plateDishes = remember(plate, item) {
+        if (plate != null && plate.entries.isNotEmpty()) plate.entries else listOf(item)
     }
-    var tempPriceString by remember(entry.id) { mutableStateOf(priceString) }
-    var editingPrice by remember { mutableStateOf(false) }
 
-    var locationName by remember(entry.id) { mutableStateOf(entry.locationName ?: "") }
-    var tempLocationName by remember(entry.id) { mutableStateOf(entry.locationName ?: "") }
-    var editingLocation by remember { mutableStateOf(false) }
+    val initialIndex = remember(plateDishes, item.entry.id) {
+        val idx = plateDishes.indexOfFirst { it.entry.id == item.entry.id }
+        if (idx >= 0) idx else 0
+    }
+    var selectedStickerIndex by remember(item.entry.id, plateDishes) { mutableIntStateOf(initialIndex) }
 
-    var mealType by remember(entry.id) { mutableStateOf(entry.mealType) }
+    val activeDish = remember(selectedStickerIndex, plateDishes) {
+        if (selectedStickerIndex in plateDishes.indices) plateDishes[selectedStickerIndex] else item
+    }
+    val entry = activeDish.entry
 
-    var timestamp by remember(entry.id) { mutableLongStateOf(entry.timestamp) }
-    var isStickerMode by remember(entry.id, entry.isStickerMode) { mutableStateOf(entry.isStickerMode) }
+    LaunchedEffect(activeDish) {
+        onActiveDishChange?.invoke(activeDish)
+    }
+
+    var isStickerMode by remember(activeDish.entry.id, activeDish.entry.isStickerMode) { mutableStateOf(activeDish.entry.isStickerMode) }
+
+    val carouselStickers = remember(plateDishes, entry, isStickerMode) {
+        if (plateDishes.size > 1) {
+            plateDishes.map { dish ->
+                if (isStickerMode && dish.entry.stickerImagePath != null) dish.entry.stickerImagePath!!
+                else dish.entry.fullImagePath
+            }
+        } else {
+            val indiv = entry.getIndividualStickerPaths()
+            if (indiv.isNotEmpty()) indiv
+            else listOf(if (isStickerMode && entry.stickerImagePath != null) entry.stickerImagePath!! else entry.fullImagePath)
+        }
+    }
+
+    var title by remember(activeDish.entry.id) { mutableStateOf(activeDish.entry.title) }
+    var tempTitle by remember(activeDish.entry.id) { mutableStateOf(activeDish.entry.title) }
+    var editingTitle by remember(activeDish.entry.id) { mutableStateOf(false) }
+
+    var note by remember(activeDish.entry.id) { mutableStateOf(activeDish.entry.note ?: "") }
+
+    var rating by remember(activeDish.entry.id) { mutableFloatStateOf(activeDish.entry.rating) }
+
+    var priceString by remember(activeDish.entry.id) {
+        mutableStateOf(activeDish.entry.price?.let { if (it % 1.0 == 0.0) it.toLong().toString() else it.toString() } ?: "")
+    }
+    var tempPriceString by remember(activeDish.entry.id) { mutableStateOf(priceString) }
+    var editingPrice by remember(activeDish.entry.id) { mutableStateOf(false) }
+
+    var locationName by remember(activeDish.entry.id) { mutableStateOf(activeDish.entry.locationName ?: "") }
+    var tempLocationName by remember(activeDish.entry.id) { mutableStateOf(activeDish.entry.locationName ?: "") }
+    var editingLocation by remember(activeDish.entry.id) { mutableStateOf(false) }
+
+    var mealType by remember(activeDish.entry.id) { mutableStateOf(activeDish.entry.mealType) }
+
+    var timestamp by remember(activeDish.entry.id) { mutableLongStateOf(activeDish.entry.timestamp) }
 
     var currentAvailableTags by remember(availableTags) { mutableStateOf(availableTags) }
-    var selectedTags by remember(entry.id, item.tags) { mutableStateOf(item.tags) }
-    var editingTags by remember { mutableStateOf(false) }
+    var selectedTags by remember(activeDish.entry.id, activeDish.tags) { mutableStateOf(activeDish.tags) }
+    var editingTags by remember(activeDish.entry.id) { mutableStateOf(false) }
 
     var isNewTagDialogOpen by remember { mutableStateOf(false) }
     var showPreview by remember { mutableStateOf(false) }
 
-    val individualStickers = remember(entry.extraStickers) { entry.getIndividualStickerPaths() }
-    var selectedStickerIndex by remember(entry.id) { mutableIntStateOf(0) }
-    val currentStickerPath = remember(selectedStickerIndex, entry.stickerImagePath, individualStickers) {
-        if (selectedStickerIndex in individualStickers.indices) {
-            individualStickers[selectedStickerIndex]
+    val currentStickerPath = remember(selectedStickerIndex, carouselStickers, activeDish.entry.stickerImagePath) {
+        if (selectedStickerIndex in carouselStickers.indices) {
+            carouselStickers[selectedStickerIndex]
         } else {
-            entry.stickerImagePath ?: entry.fullImagePath
+            activeDish.entry.stickerImagePath ?: activeDish.entry.fullImagePath
         }
     }
 
@@ -118,16 +150,16 @@ fun JournalDetailContent(
         )
     }
 
-    var isFavoriteState by remember(entry.id, isFavorite) { mutableStateOf(isFavorite) }
-    LaunchedEffect(isFavorite) {
-        isFavoriteState = isFavorite
+    var isFavoriteState by remember(activeDish.entry.id, activeDish.entry.isFavorite) { mutableStateOf(activeDish.entry.isFavorite) }
+    LaunchedEffect(activeDish.entry.isFavorite) {
+        isFavoriteState = activeDish.entry.isFavorite
     }
 
-    LaunchedEffect(title, note, rating, priceString, locationName, mealType, timestamp, isStickerMode, selectedTags, isFavoriteState) {
+    LaunchedEffect(title, note, rating, priceString, locationName, mealType, timestamp, isStickerMode, selectedTags, isFavoriteState, activeDish.entry.id) {
         delay(300L)
         val parsedPrice = priceString.toDoubleOrNull()
-        val updated = entry.copy(
-            title = title.trim().ifEmpty { entry.title },
+        val updated = activeDish.entry.copy(
+            title = title.trim().ifEmpty { activeDish.entry.title },
             note = note.trim().ifEmpty { null },
             rating = rating,
             price = parsedPrice,
@@ -137,7 +169,7 @@ fun JournalDetailContent(
             isStickerMode = isStickerMode,
             isFavorite = isFavoriteState
         )
-        if (updated != entry || selectedTags != item.tags) {
+        if (updated != activeDish.entry || selectedTags != activeDish.tags) {
             onEntryChange(updated, selectedTags)
         }
     }
@@ -461,7 +493,7 @@ fun JournalDetailContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                if (individualStickers.size <= 1 || !isStickerMode) {
+                if (carouselStickers.size <= 1) {
                     Box(
                         modifier = Modifier
                             .size(165.dp)
@@ -498,8 +530,9 @@ fun JournalDetailContent(
                     }
                 } else {
                     StickerCarousel(
-                        stickers = individualStickers,
+                        stickers = carouselStickers,
                         initialIndex = selectedStickerIndex,
+                        isStickerMode = isStickerMode,
                         onStickerClick = {
                             selectedStickerIndex = it
                             showPreview = true
@@ -689,8 +722,8 @@ fun JournalDetailContent(
     }
 
     if (showPreview) {
-        val tappedPath = if (isStickerMode && individualStickers.isNotEmpty() && selectedStickerIndex in individualStickers.indices) {
-            individualStickers[selectedStickerIndex]
+        val tappedPath = if (selectedStickerIndex in carouselStickers.indices) {
+            carouselStickers[selectedStickerIndex]
         } else if (isStickerMode && entry.stickerImagePath != null) {
             entry.stickerImagePath
         } else {
@@ -699,7 +732,7 @@ fun JournalDetailContent(
         StickerPreviewDialog(
             imageFile = File(tappedPath),
             title = title,
-            isSticker = isStickerMode && (entry.stickerImagePath != null || individualStickers.isNotEmpty()),
+            isSticker = isStickerMode && (entry.stickerImagePath != null || carouselStickers.isNotEmpty()),
             onDismiss = { showPreview = false }
         )
     }

@@ -168,8 +168,18 @@ class EntryEditorViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(dishTitle = effectiveTitle, isSaving = true, errorMessage = null) }
             try {
+                val effectiveLocation = state.locationName.trim().takeIf { it.isNotBlank() } ?: state.geocodedAddress
+                val recent = if (!effectiveLocation.isNullOrBlank()) {
+                    val minTime = state.timestamp - (2 * 60 * 60 * 1000L)
+                    plateEntryDao.findRecentEntryAtVenue(effectiveLocation, minTime)
+                } else null
+                val sessionId = recent?.plateSessionId ?: java.util.UUID.randomUUID().toString()
+                if (recent != null && recent.plateSessionId == null) {
+                    plateEntryDao.updateEntry(recent.copy(plateSessionId = sessionId))
+                }
+
                 plateEntryDao.insertEntryWithTags(
-                    entry = state.copy(dishTitle = effectiveTitle).toPlateEntryEntity(),
+                    entry = state.copy(dishTitle = effectiveTitle).toPlateEntryEntity(plateSessionId = sessionId),
                     tags = state.selectedTags.toList(),
                     tagDao = tagDao
                 )

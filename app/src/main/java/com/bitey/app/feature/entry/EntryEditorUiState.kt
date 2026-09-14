@@ -28,7 +28,7 @@ data class EntryEditorUiState(
     val errorMessage: String? = null,
     val isNewTagDialogOpen: Boolean = false
 ) {
-    fun toPlateEntryEntity(): PlateEntryEntity {
+    fun toPlateEntryEntity(plateSessionId: String? = null): PlateEntryEntity {
         return PlateEntryEntity(
             title = dishTitle.trim().ifBlank { mealType.label },
             note = notes.trim().takeIf { it.isNotBlank() },
@@ -44,7 +44,8 @@ data class EntryEditorUiState(
             latitude = latitude,
             longitude = longitude,
             locationName = locationName.trim().takeIf { it.isNotBlank() } ?: geocodedAddress,
-            mealType = mealType
+            mealType = mealType,
+            plateSessionId = plateSessionId
         )
     }
 }

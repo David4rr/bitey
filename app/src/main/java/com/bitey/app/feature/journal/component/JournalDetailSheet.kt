@@ -5,6 +5,8 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -30,6 +32,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.bitey.app.core.database.model.PlateEntryEntity
 import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.database.model.TagEntity
@@ -40,13 +43,15 @@ import com.bitey.app.core.ui.theme.StickerDieCutWhite
 @Composable
 fun JournalDetailSheet(
     item: PlateEntryWithTags,
+    plate: com.bitey.app.feature.journal.JournalPlate? = null,
     onClose: () -> Unit,
     onToggleFavorite: () -> Unit,
     onDelete: () -> Unit,
     availableTags: List<TagEntity> = emptyList(),
     onSaveEntry: ((PlateEntryEntity, List<TagEntity>) -> Unit)? = null
 ) {
-    val entry = item.entry
+    var activeDish by remember(item, plate) { mutableStateOf(item) }
+    val entry = activeDish.entry
     val theme = LocalNeumorphicTheme.current
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
@@ -132,9 +137,11 @@ fun JournalDetailSheet(
             // Direct in-place editable content with Title aligned with Love button
             JournalDetailContent(
                 item = item,
+                plate = plate,
                 availableTags = availableTags,
-                isFavorite = entry.isFavorite,
+                isFavorite = activeDish.entry.isFavorite,
                 onToggleFavorite = onToggleFavorite,
+                onActiveDishChange = { activeDish = it },
                 onClose = onClose,
                 onEntryChange = { updated, tags ->
                     onSaveEntry?.invoke(updated, tags)
