@@ -266,4 +266,24 @@ class RevisionFeaturesTest {
         val reviewText = reviewFile.readText()
         assertTrue("Allows choosing Sticker Mode or Full Photo", reviewText.contains("Sticker Mode") && reviewText.contains("Full Photo"))
     }
+
+    @Test
+    fun imageStorageNaming_namedByImageContract() {
+        val namingFile = java.io.File("src/main/java/com/bitey/app/core/image/ImageStorageNaming.kt")
+        assertTrue("ImageStorageNaming exists", namingFile.exists())
+        val namingText = namingFile.readText()
+        assertTrue("Sanitizes image name", namingText.contains("sanitizeName"))
+        assertTrue("Resolves saved file", namingText.contains("resolveSavedFile"))
+
+        val vmFile = java.io.File("src/main/java/com/bitey/app/feature/entry/NewEntryViewModel.kt")
+        val vmText = vmFile.readText()
+        assertTrue("Uses ImageStorageNaming to name files by image name", vmText.contains("ImageStorageNaming.saveAsNamedImage"))
+
+        val gitignoreFile = java.io.File("../.gitignore").takeIf { it.exists() } ?: java.io.File(".gitignore")
+        if (gitignoreFile.exists()) {
+            val gitignoreText = gitignoreFile.readText()
+            assertTrue("Ignores AGENTS.md", gitignoreText.contains("AGENTS.md"))
+            assertTrue("Ignores .agents/", gitignoreText.contains(".agents/"))
+        }
+    }
 }
