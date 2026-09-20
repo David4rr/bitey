@@ -22,7 +22,8 @@ import javax.inject.Inject
 @HiltViewModel
 class JournalViewModel @Inject constructor(
     private val plateEntryDao: PlateEntryDao,
-    private val tagDao: TagDao
+    private val tagDao: TagDao,
+    private val geocoderRepository: com.bitey.app.core.location.GeocoderRepository
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -279,8 +280,14 @@ class JournalViewModel @Inject constructor(
 
     fun updateEntry(entry: PlateEntryEntity, tags: List<TagEntity>) {
         viewModelScope.launch(Dispatchers.IO) {
-            plateEntryDao.updateEntryWithTags(entry, tags, tagDao)
-            _selectedEntryForDetail.value = PlateEntryWithTags(entry, tags)
+            val resolvedEntry = if (entry.latitude == null && !entry.locationName.isNullOrBlank()) {
+                val coords = geocoderRepository.forwardGeocode(entry.locationName)
+                if (coords != null) {
+                    entry.copy(latitude = coords.latitude, longitude = coords.longitude)
+                } else entry
+            } else entry
+            plateEntryDao.updateEntryWithTags(resolvedEntry, tags, tagDao)
+            _selectedEntryForDetail.value = PlateEntryWithTags(resolvedEntry, tags)
         }
     }
 }

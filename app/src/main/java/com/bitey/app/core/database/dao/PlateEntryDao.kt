@@ -49,6 +49,9 @@ interface PlateEntryDao {
     @Query("SELECT * FROM plate_entries WHERE plateSessionId = :sessionId ORDER BY timestamp ASC")
     fun getEntriesByPlateSessionId(sessionId: String): Flow<List<PlateEntryWithTags>>
 
+    @Query("SELECT * FROM plate_entries WHERE latitude IS NULL OR longitude IS NULL")
+    suspend fun getEntriesWithMissingLocation(): List<PlateEntryEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntry(entry: PlateEntryEntity): Long
 

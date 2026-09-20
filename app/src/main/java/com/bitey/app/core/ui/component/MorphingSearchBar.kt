@@ -138,7 +138,7 @@ fun MorphingSearchBar(
         ) {
             // Collapsed Icon: Crossfades out in Draw phase
             Icon(
-                imageVector = Icons.Rounded.Search,
+                painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_search),
                 contentDescription = "Search",
                 tint = if (searchQuery.isNotEmpty()) BiteyOrange else theme.inkPrimary,
                 modifier = Modifier.size(22.dp).graphicsLayer {
@@ -155,7 +155,7 @@ fun MorphingSearchBar(
                 },
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Rounded.Search, contentDescription = null, tint = BiteyOrange, modifier = Modifier.size(18.dp))
+                Icon(painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_search), contentDescription = null, tint = BiteyOrange, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 BasicTextField(
                     value = searchQuery,

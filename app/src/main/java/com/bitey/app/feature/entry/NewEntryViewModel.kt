@@ -37,6 +37,9 @@ class NewEntryViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(NewEntryUiState())
     val uiState: StateFlow<NewEntryUiState> = _uiState.asStateFlow()
+    init {
+        viewModelScope.launch { fetchLocation() }
+    }
 
     fun setPhotoMode(mode: PhotoMode) { _uiState.update { it.copy(photoMode = mode) } }
     fun updateDishName(name: String) { _uiState.update { it.copy(dishName = name) } }
@@ -123,12 +126,19 @@ class NewEntryViewModel @Inject constructor(
             _uiState.update { it.copy(step = CaptureFlowStep.REVIEW, candidates = list) }
         }
     }
-
     fun onImagePicked(uri: Uri) {
         viewModelScope.launch {
             _uiState.update { it.copy(step = CaptureFlowStep.PROCESSING, segmentationStatusText = "Reading gallery photo...") }
             imagePreprocessor.processUri(uri).fold(
-                onSuccess = { processed -> processSingleFile(processed.file) },
+                onSuccess = { processed ->
+                    val exifLat = processed.exifMetadata.latitude
+                    val exifLng = processed.exifMetadata.longitude
+                    if (exifLat != null && exifLng != null) {
+                        val locName = geocoderRepository.reverseGeocode(exifLat, exifLng)?.displayName
+                        _uiState.update { it.copy(latitude = exifLat, longitude = exifLng, locationName = locName) }
+                    }
+                    processSingleFile(processed.file)
+                },
                 onFailure = { error -> _uiState.update { it.copy(step = CaptureFlowStep.CAMERA, errorMessage = error.localizedMessage) } }
             )
         }
@@ -137,7 +147,9 @@ class NewEntryViewModel @Inject constructor(
     private fun processSingleFile(file: File) {
         viewModelScope.launch {
             _uiState.update { it.copy(step = CaptureFlowStep.PROCESSING, processingSourceFile = file.absolutePath, processingStickerFile = null, segmentationStatusText = "Detecting dishes & removing background...") }
-            fetchLocation()
+            if (_uiState.value.latitude == null || _uiState.value.longitude == null) {
+                fetchLocation()
+            }
             val stickers = stickerPipeline.createStickersForMultiSubject(file)
             val list = if (stickers.isNotEmpty()) {
                 stickers.mapIndexed { idx, s ->
@@ -163,6 +175,7 @@ class NewEntryViewModel @Inject constructor(
     }
 
     private suspend fun fetchLocation() {
+        if (_uiState.value.latitude != null && _uiState.value.longitude != null) return
         val coords = locationProvider.getCurrentLocation() ?: return
         val locName = geocoderRepository.reverseGeocode(coords.latitude, coords.longitude)?.displayName
         _uiState.update { it.copy(latitude = coords.latitude, longitude = coords.longitude, locationName = locName) }
@@ -192,6 +205,17 @@ class NewEntryViewModel @Inject constructor(
             val isSticker = state.isStickerMode
             val storageDir = File(context.filesDir, if (isSticker) "bites/stickers" else "bites/media")
             val currentTime = System.currentTimeMillis()
+            var lat = state.latitude
+            var lng = state.longitude
+            var locName = state.locationName
+            if (lat == null || lng == null) {
+                val coords = locationProvider.getCurrentLocation(timeoutMillis = 2000L)
+                if (coords != null) {
+                    lat = coords.latitude
+                    lng = coords.longitude
+                    locName = geocoderRepository.reverseGeocode(coords.latitude, coords.longitude)?.displayName
+                }
+            }
 
             val sessionId = java.util.UUID.randomUUID().toString()
 
@@ -213,9 +237,9 @@ class NewEntryViewModel @Inject constructor(
                         currency = "IDR",
                         isFavorite = false,
                         timestamp = currentTime + idx,
-                        latitude = state.latitude,
-                        longitude = state.longitude,
-                        locationName = state.locationName,
+                        latitude = lat,
+                        longitude = lng,
+                        locationName = locName,
                         mealType = item.mealType,
                         extraStickers = null,
                         plateSessionId = sessionId

@@ -49,7 +49,7 @@ fun JournalSideRail(
     ) {
         VerticalActionText(
             text = if (isGridView) "GRID" else "LIST",
-            icon = if (isGridView) Icons.Rounded.GridView else Icons.AutoMirrored.Rounded.ViewList,
+            icon = if (isGridView) androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_grid_view) else androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_view_list),
             onClick = onToggleGridView,
             isSelected = true
         )
@@ -63,19 +63,19 @@ fun JournalSideRail(
 
         VerticalActionText(
             text = "FOOTPRINT",
-            icon = Icons.Rounded.Place,
+            icon = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_place),
             onClick = onNavigateToFootprints
         )
 
         VerticalActionText(
             text = "FATES TABLE",
-            icon = Icons.Rounded.AutoAwesome,
+            icon = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_auto_awesome),
             onClick = onNavigateToFateTable
         )
 
         VerticalActionText(
             text = "SCRAPBOOK",
-            icon = Icons.Rounded.Collections,
+            icon = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_collections),
             onClick = onNavigateToScrapbook
         )
     }
@@ -84,7 +84,7 @@ fun JournalSideRail(
 @Composable
 fun VerticalActionText(
     text: String,
-    icon: ImageVector,
+    icon: androidx.compose.ui.graphics.painter.Painter,
     onClick: () -> Unit,
     isSelected: Boolean = false,
     modifier: Modifier = Modifier
@@ -98,7 +98,7 @@ fun VerticalActionText(
             .padding(vertical = 4.dp, horizontal = 2.dp)
     ) {
         Icon(
-            imageVector = icon,
+            painter = icon,
             contentDescription = text,
             tint = if (isSelected) BiteyOrange else BiteyOrange.copy(alpha = 0.85f),
             modifier = Modifier.size(14.dp)

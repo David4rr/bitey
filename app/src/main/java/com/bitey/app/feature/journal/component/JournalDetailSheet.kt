@@ -126,7 +126,7 @@ fun JournalDetailSheet(
                         .size(28.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.Close,
+                        painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_close),
                         contentDescription = "Close",
                         tint = theme.inkSecondary,
                         modifier = Modifier.size(18.dp)
@@ -189,7 +189,7 @@ fun JournalDetailSheet(
                     val tintColor = if (isPastThreshold) Color(0xFFEF4444) else theme.inkMuted.copy(alpha = 0.5f + pullFraction * 0.5f)
 
                     Icon(
-                        imageVector = if (isPastThreshold) Icons.Rounded.Delete else Icons.Rounded.KeyboardArrowUp,
+                        painter = if (isPastThreshold) androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_delete) else androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_keyboard_arrow_up),
                         contentDescription = null,
                         tint = tintColor,
                         modifier = Modifier.size(iconSize)

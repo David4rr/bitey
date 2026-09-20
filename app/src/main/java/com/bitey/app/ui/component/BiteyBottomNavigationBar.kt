@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -113,12 +114,29 @@ fun BiteyBottomNavigationBar(
                                 }
                                 .padding(vertical = 2.dp)
                         ) {
-                            if (screen.icon != null) {
+                            val iconScale by animateFloatAsState(
+                            targetValue = if (selected) 1.15f else 1.0f,
+                            animationSpec = spring(dampingRatio = 0.5f, stiffness = 200f),
+                            label = "iconScale"
+                        )
+                        val iconRotation by animateFloatAsState(
+                            targetValue = if (selected && screen == Screen.Journal) -8f else 0f,
+                            animationSpec = spring(dampingRatio = 0.5f, stiffness = 200f),
+                            label = "iconRotation"
+                        )
+                        
+                        if (screen.iconResId != null) {
                                 Icon(
-                                    imageVector = screen.icon,
+                                    painter = androidx.compose.ui.res.painterResource(id = screen.iconResId),
                                     contentDescription = screen.title,
                                     tint = animatedIconColor,
-                                    modifier = Modifier.size(17.dp)
+                                    modifier = Modifier
+                                        .size(17.dp)
+                                        .graphicsLayer {
+                                            scaleX = iconScale
+                                            scaleY = iconScale
+                                            rotationZ = iconRotation
+                                        }
                                 )
                             }
                             Spacer(modifier = Modifier.height(1.dp))
@@ -162,7 +180,7 @@ fun BiteyBottomNavigationBar(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.CameraAlt,
+                    painter = androidx.compose.ui.res.painterResource(id = com.bitey.app.R.drawable.ic_doodle_camera_alt),
                     contentDescription = "Capture Food",
                     tint = StickerDieCutWhite,
                     modifier = Modifier.size(22.dp)

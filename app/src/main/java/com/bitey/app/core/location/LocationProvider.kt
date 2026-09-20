@@ -46,36 +46,36 @@ class LocationProvider @Inject constructor(
 
         return withContext(Dispatchers.IO) {
             try {
-                withTimeoutOrNull(timeoutMillis) {
+                val coords = withTimeoutOrNull(timeoutMillis) {
                     val cancellationTokenSource = CancellationTokenSource()
                     try {
                         val location = fusedLocationClient.getCurrentLocation(
                             Priority.PRIORITY_BALANCED_POWER_ACCURACY,
                             cancellationTokenSource.token
-                        ).await()
+                        ).await() ?: fusedLocationClient.lastLocation.await()
 
-                        if (location != null) {
-                            LocationCoordinates(
-                                latitude = location.latitude,
-                                longitude = location.longitude
-                            )
-                        } else {
-                            // Fallback to last known location
-                            val lastLocation = fusedLocationClient.lastLocation.await()
-                            lastLocation?.let {
-                                LocationCoordinates(
-                                    latitude = it.latitude,
-                                    longitude = it.longitude
-                                )
-                            }
-                        }
+                        location?.let { LocationCoordinates(it.latitude, it.longitude) }
                     } finally {
                         cancellationTokenSource.cancel()
                     }
                 }
-            } catch (e: SecurityException) {
+                if (coords != null) return@withContext coords
+
+                // System LocationManager fallback (reliable on emulators and non-GMS devices)
+                val lm = context.getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager
+                val providers = listOf(
+                    android.location.LocationManager.GPS_PROVIDER,
+                    android.location.LocationManager.NETWORK_PROVIDER,
+                    android.location.LocationManager.PASSIVE_PROVIDER
+                )
+                for (provider in providers) {
+                    try {
+                        val loc = lm?.getLastKnownLocation(provider)
+                        if (loc != null) return@withContext LocationCoordinates(loc.latitude, loc.longitude)
+                    } catch (_: Exception) {}
+                }
                 null
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 null
             }
         }

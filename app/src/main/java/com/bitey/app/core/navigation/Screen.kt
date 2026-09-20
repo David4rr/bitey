@@ -12,14 +12,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 sealed class Screen(
     val route: String,
     val title: String,
-    val icon: ImageVector? = null
+    val iconResId: Int? = null
 ) {
-    data object Journal : Screen("journal", "Journal", Icons.AutoMirrored.Rounded.MenuBook)
-    data object Footprints : Screen("footprints", "Footprints", Icons.Rounded.Place)
-    data object NewEntry : Screen("new_entry", "Capture", Icons.Rounded.CameraAlt)
-    data object FateTable : Screen("fate_table", "Fate's Table", Icons.Rounded.AutoAwesome)
-    data object Scrapbook : Screen("scrapbook", "Scrapbook", Icons.Rounded.Collections)
-    data object Profile : Screen("profile", "Profile", Icons.Rounded.Person)
+    data object Journal : Screen("journal", "Journal", com.bitey.app.R.drawable.ic_doodle_menu_book)
+    data object Footprints : Screen("footprints", "Footprints", com.bitey.app.R.drawable.ic_doodle_place)
+    data object NewEntry : Screen("new_entry", "Capture", com.bitey.app.R.drawable.ic_doodle_camera_alt)
+    data object FateTable : Screen("fate_table", "Fate's Table", com.bitey.app.R.drawable.ic_doodle_auto_awesome)
+    data object Scrapbook : Screen("scrapbook", "Scrapbook", com.bitey.app.R.drawable.ic_doodle_collections)
+    data object Profile : Screen("profile", "Profile", com.bitey.app.R.drawable.ic_doodle_person)
     data object EntryEditor : Screen("entry_editor", "Entry Editor") {
         const val ROUTE_WITH_ARGS = "entry_editor?imagePath={imagePath}&stickerPath={stickerPath}&timestamp={timestamp}&lat={lat}&lng={lng}"
 

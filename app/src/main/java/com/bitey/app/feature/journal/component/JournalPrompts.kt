@@ -116,7 +116,7 @@ fun NoSearchResultsPrompt(onClearFilters: () -> Unit, modifier: Modifier = Modif
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(imageVector = Icons.Rounded.Search, contentDescription = null, tint = theme.inkMuted, modifier = Modifier.size(40.dp))
+                Icon(painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_search), contentDescription = null, tint = theme.inkMuted, modifier = Modifier.size(40.dp))
                 Spacer(modifier = Modifier.height(14.dp))
                 Text(text = "No Matching Bites", style = BrandHeaderMedium, color = theme.inkPrimary)
                 Spacer(modifier = Modifier.height(4.dp))
