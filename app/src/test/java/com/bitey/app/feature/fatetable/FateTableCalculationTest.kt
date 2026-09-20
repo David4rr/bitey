@@ -4,12 +4,13 @@ import com.bitey.app.core.database.model.MealType
 import com.bitey.app.core.database.model.PlateEntryEntity
 import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.database.model.TagEntity
+import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
 
 class FateTableCalculationTest {
 
@@ -129,5 +130,32 @@ class FateTableCalculationTest {
         val spicyOnly = allCandidates.filter { item -> item.tags.any { it.tagId == 1L } }
         assertEquals(1, spicyOnly.size)
         assertEquals("Ayam Geprek", spicyOnly.first().entry.title)
+    }
+
+    @Test
+    fun wheelCanvas_dishImagesAndZoomHighlightContract() {
+        val canvasFile = File("src/main/java/com/bitey/app/feature/fatetable/component/WheelCanvas.kt").takeIf { it.exists() }
+            ?: File("app/src/main/java/com/bitey/app/feature/fatetable/component/WheelCanvas.kt")
+        assertTrue("WheelCanvas exists", canvasFile.exists())
+        val canvasText = canvasFile.readText()
+
+        assertTrue("Renders dish image using AsyncImage", canvasText.contains("AsyncImage"))
+        assertTrue("Renders dish title", canvasText.contains("candidate.entry.title"))
+        assertTrue("Applies zoom-out highlight animation to selected dish", canvasText.contains("animateFloatAsState") && canvasText.contains("scale"))
+        assertFalse("Eliminated white pill sausage ribbons", canvasText.contains("pillPath"))
+        assertFalse("Eliminated rainbow pie slice wedges", canvasText.contains("drawArc"))
+        assertFalse("Eliminated circular card background behind dishes", canvasText.contains("minimalistCard"))
+        assertTrue("Uses CropTransparentTransformation to remove photo background", canvasText.contains("CropTransparentTransformation"))
+
+        val screenFile = File("src/main/java/com/bitey/app/feature/fatetable/FateTableScreen.kt").takeIf { it.exists() }
+            ?: File("app/src/main/java/com/bitey/app/feature/fatetable/FateTableScreen.kt")
+        assertTrue("FateTableScreen exists", screenFile.exists())
+        val screenText = screenFile.readText()
+        assertFalse("Orange triangle pointer indicator removed", screenText.contains("WheelPointerIndicator"))
+        assertTrue("Uses WinningDishBottomSheet", screenText.contains("WinningDishBottomSheet"))
+
+        val sheetFile = File("src/main/java/com/bitey/app/feature/fatetable/component/WinningDishBottomSheet.kt").takeIf { it.exists() }
+            ?: File("app/src/main/java/com/bitey/app/feature/fatetable/component/WinningDishBottomSheet.kt")
+        assertTrue("WinningDishBottomSheet exists", sheetFile.exists())
     }
 }

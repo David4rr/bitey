@@ -28,6 +28,7 @@ import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.core.ui.theme.StickerDieCutWhite
 import com.bitey.app.feature.fatetable.component.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -70,11 +71,6 @@ fun FateTableScreen(
             candidateCount = uiState.candidates.size,
             isSpinning = uiState.isSpinning,
             onShuffle = { viewModel.shuffleCandidates() },
-            selectedFilter = uiState.selectedFilter,
-            selectedTagId = uiState.selectedTagId,
-            availableTags = uiState.availableTags,
-            onSelectFilter = { viewModel.selectFilter(it) },
-            onSelectTag = { viewModel.selectTag(it) },
             onNavigateBack = onNavigateBack
         )
 
@@ -97,23 +93,14 @@ fun FateTableScreen(
                     .padding(12.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .minimalistCard(cornerRadius = 180.dp, elevation = 0.dp)
-                )
 
                 WheelCanvas(
                     candidates = uiState.candidates,
                     rotationAngle = rotationAnimatable.value,
-                    modifier = Modifier.fillMaxSize().padding(14.dp)
+                    winningEntry = uiState.winningEntry,
+                    isSpinning = uiState.isSpinning,
+                    modifier = Modifier.fillMaxSize().padding(8.dp)
                 )
-
-                WheelPointerIndicator(
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 2.dp)
-                )
-
-                CenterHubCap()
             }
 
             Spacer(modifier = Modifier.height(28.dp))
@@ -132,6 +119,7 @@ fun FateTableScreen(
                                 )
                             )
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            delay(600)
                             viewModel.onSpinCompleted(spinResult.targetAngle, spinResult.winningEntry)
                         }
                     }
@@ -159,7 +147,7 @@ fun FateTableScreen(
     }
 
     if (uiState.showWinningDialog && uiState.winningEntry != null) {
-        WinningDishDialog(
+        WinningDishBottomSheet(
             entryWithTags = uiState.winningEntry!!,
             onDismiss = { viewModel.dismissWinningDialog() },
             onNavigate = {

@@ -22,28 +22,6 @@ import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.core.ui.theme.StickerDieCutWhite
 
-@Composable
-fun FateFilterPill(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    enabled: Boolean
-) {
-    val theme = LocalNeumorphicTheme.current
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) BiteyOrange else theme.surfaceVariant)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (isSelected) StickerDieCutWhite else if (enabled) theme.inkSecondary else theme.inkMuted
-        )
-    }
-}
 
 @Composable
 fun InsufficientCandidatesPrompt(

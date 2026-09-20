@@ -2,8 +2,6 @@ package com.bitey.app.feature.fatetable.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -16,23 +14,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bitey.app.core.database.model.TagEntity
 import com.bitey.app.core.ui.neumorphic.minimalistCard
 import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.BrandHeaderLarge
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
-import com.bitey.app.feature.fatetable.FateSourceFilter
 
 @Composable
 fun FateTableHeader(
     candidateCount: Int,
     isSpinning: Boolean,
     onShuffle: () -> Unit,
-    selectedFilter: FateSourceFilter,
-    selectedTagId: Long?,
-    availableTags: List<TagEntity>,
-    onSelectFilter: (FateSourceFilter) -> Unit,
-    onSelectTag: (Long?) -> Unit,
     onNavigateBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -103,55 +94,6 @@ fun FateTableHeader(
                         )
                     }
                 }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            item {
-                FateFilterPill(
-                    text = "All Recorded",
-                    isSelected = selectedFilter == FateSourceFilter.ALL && selectedTagId == null,
-                    onClick = {
-                        onSelectFilter(FateSourceFilter.ALL)
-                        onSelectTag(null)
-                    },
-                    enabled = !isSpinning
-                )
-            }
-            item {
-                FateFilterPill(
-                    text = "Favorites Only",
-                    isSelected = selectedFilter == FateSourceFilter.FAVORITES && selectedTagId == null,
-                    onClick = {
-                        onSelectFilter(FateSourceFilter.FAVORITES)
-                        onSelectTag(null)
-                    },
-                    enabled = !isSpinning
-                )
-            }
-            item {
-                FateFilterPill(
-                    text = "Recent 30 Days",
-                    isSelected = selectedFilter == FateSourceFilter.RECENT_30_DAYS && selectedTagId == null,
-                    onClick = {
-                        onSelectFilter(FateSourceFilter.RECENT_30_DAYS)
-                        onSelectTag(null)
-                    },
-                    enabled = !isSpinning
-                )
-            }
-            items(availableTags, key = { it.tagId }) { tag ->
-                FateFilterPill(
-                    text = tag.tagName,
-                    isSelected = selectedTagId == tag.tagId,
-                    onClick = { onSelectTag(tag.tagId) },
-                    enabled = !isSpinning
-                )
             }
         }
     }
