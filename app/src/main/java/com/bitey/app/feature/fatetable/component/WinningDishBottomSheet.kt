@@ -9,18 +9,21 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.bitey.app.core.database.model.PlateEntryWithTags
+import com.bitey.app.core.image.CropTransparentTransformation
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
-import com.bitey.app.core.ui.neumorphic.minimalistCard
 import com.bitey.app.core.ui.theme.BiteyMint
 import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
@@ -36,9 +39,24 @@ fun WinningDishBottomSheet(
     onNavigate: () -> Unit
 ) {
     val theme = LocalNeumorphicTheme.current
+    val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val entry = entryWithTags.entry
-    val imageFile = File(if (entry.isStickerMode && entry.stickerImagePath != null) entry.stickerImagePath else entry.fullImagePath)
+    val stickerPath = entry.stickerImagePath?.takeIf { File(it).exists() }
+        ?: entry.getAllStickerPaths().firstOrNull { File(it).exists() }
+        ?: entry.fullImagePath
+    val isSticker = entry.isStickerMode || stickerPath != entry.fullImagePath
+    val imageRequest = remember(stickerPath, isSticker) {
+        ImageRequest.Builder(context)
+            .data(File(stickerPath))
+            .apply {
+                if (isSticker) {
+                    transformations(CropTransparentTransformation())
+                }
+            }
+            .crossfade(true)
+            .build()
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -69,27 +87,21 @@ fun WinningDishBottomSheet(
 
             Box(
                 modifier = Modifier
-                    .size(130.dp)
-                    .aspectRatio(1f)
-                    .minimalistCard(cornerRadius = 24.dp, elevation = 2.dp)
-                    .padding(10.dp),
+                    .size(140.dp)
+                    .aspectRatio(1f),
                 contentAlignment = Alignment.Center
             ) {
-                if (entry.isStickerMode && entry.stickerImagePath != null) {
-                    AsyncImage(
-                        model = imageFile,
-                        contentDescription = entry.title,
-                        modifier = Modifier.fillMaxSize().dieCutStickerEffect(),
-                        contentScale = ContentScale.Fit
-                    )
-                } else {
-                    AsyncImage(
-                        model = imageFile,
-                        contentDescription = entry.title,
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                }
+                AsyncImage(
+                    model = imageRequest,
+                    contentDescription = entry.title,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (isSticker) Modifier.dieCutStickerEffect()
+                            else Modifier.clip(RoundedCornerShape(20.dp))
+                        ),
+                    contentScale = if (isSticker) ContentScale.Fit else ContentScale.Crop
+                )
             }
 
             Spacer(modifier = Modifier.height(14.dp))

@@ -31,7 +31,7 @@ fun BiteyNavHost(
         composable(Screen.Journal.route) {
             JournalScreen(
                 onNavigateToNewEntry = onOpenLiveCamera,
-                onNavigateToFootprints = { navController.navigate(Screen.Footprints.route) },
+                onNavigateToFootprints = { navController.navigate(Screen.Footprints.createRoute()) },
                 onNavigateToFateTable = { navController.navigate(Screen.FateTable.route) },
                 onNavigateToScrapbook = { navController.navigate(Screen.Scrapbook.route) }
             )
@@ -41,8 +41,18 @@ fun BiteyNavHost(
             ProfileScreen()
         }
 
-        composable(Screen.Footprints.route) {
+        composable(
+            route = Screen.Footprints.ROUTE_WITH_ARGS,
+            arguments = listOf(
+                navArgument("targetEntryId") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                }
+            )
+        ) { backStackEntry ->
+            val targetEntryId = backStackEntry.arguments?.getLong("targetEntryId")?.takeIf { it != -1L }
             FootprintsScreen(
+                targetEntryId = targetEntryId,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
@@ -50,6 +60,9 @@ fun BiteyNavHost(
         composable(Screen.FateTable.route) {
             FateTableScreen(
                 onNavigateToNewEntry = onOpenLiveCamera,
+                onNavigateToFootprints = { entryId ->
+                    navController.navigate(Screen.Footprints.createRoute(entryId))
+                },
                 onNavigateBack = { navController.popBackStack() }
             )
         }

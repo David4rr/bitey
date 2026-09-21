@@ -1,14 +1,10 @@
 package com.bitey.app.feature.footprints
 
 import android.Manifest
-import android.content.Intent
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +22,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun FootprintsScreen(
+    targetEntryId: Long? = null,
     onNavigateBack: (() -> Unit)? = null,
     viewModel: FootprintsViewModel = hiltViewModel()
 ) {
@@ -40,16 +37,29 @@ fun FootprintsScreen(
     val locationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { perms ->
         if (perms[Manifest.permission.ACCESS_FINE_LOCATION] == true || perms[Manifest.permission.ACCESS_COARSE_LOCATION] == true) viewModel.fetchDeviceLocation()
     }
+
     LaunchedEffect(Unit) {
         if (!viewModel.hasLocationPermission()) {
             locationLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
         } else viewModel.fetchDeviceLocation()
     }
 
+    LaunchedEffect(targetEntryId) {
+        if (targetEntryId != null && targetEntryId != -1L) {
+            viewModel.startNavigationForEntryId(targetEntryId)
+        }
+    }
+
+    LaunchedEffect(uiState.activeRoute, mapView) {
+        NavigationRouteOverlay.renderRoute(mapView, uiState.activeRoute)
+    }
+
     val userMarkerIcon = remember(context) { FootprintsMapUtils.createUserLocationMarkerIcon(context) }
 
     LaunchedEffect(uiState.entriesWithLocation, deviceLocation, mapView) {
         mapView.overlays.clear()
+        NavigationRouteOverlay.renderRoute(mapView, uiState.activeRoute, autoZoom = false)
+
         deviceLocation?.let { loc ->
             val userMarker = Marker(mapView).apply {
                 position = GeoPoint(loc.latitude, loc.longitude)
@@ -109,18 +119,25 @@ fun FootprintsScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        FootprintsTopBar(
-            isSearchActive = isSearchActive,
-            onSearchActiveChange = { isSearchActive = it },
-            searchQuery = uiState.searchQuery,
-            onSearchQueryChange = { viewModel.updateSearchQuery(it) },
-            spotsCount = uiState.entriesWithLocation.size,
-            favoritesCount = uiState.favoriteSpotsCount,
-            isFavoritesOnly = uiState.isFavoritesOnly,
-            onToggleFavoritesOnly = { viewModel.toggleFavoritesOnly() },
-            onNavigateBack = onNavigateBack,
-            modifier = Modifier.align(Alignment.TopCenter)
-        )
+        if (uiState.isNavigating) {
+            NavigationTopBanner(
+                currentStep = uiState.currentManeuverStep,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
+        } else {
+            FootprintsTopBar(
+                isSearchActive = isSearchActive,
+                onSearchActiveChange = { isSearchActive = it },
+                searchQuery = uiState.searchQuery,
+                onSearchQueryChange = { viewModel.updateSearchQuery(it) },
+                spotsCount = uiState.entriesWithLocation.size,
+                favoritesCount = uiState.favoriteSpotsCount,
+                isFavoritesOnly = uiState.isFavoritesOnly,
+                onToggleFavoritesOnly = { viewModel.toggleFavoritesOnly() },
+                onNavigateBack = onNavigateBack,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
+        }
 
         MapControlsColumn(
             onRecenter = {
@@ -134,7 +151,7 @@ fun FootprintsScreen(
                     mapView.controller.setZoom(16.0)
                 }
             },
-            showFitPins = uiState.entriesWithLocation.size > 1,
+            showFitPins = uiState.entriesWithLocation.size > 1 && !uiState.isNavigating,
             onFitPins = {
                 val pts = uiState.entriesWithLocation.mapNotNull { it.entry.latitude?.let { lat -> it.entry.longitude?.let { lng -> GeoPoint(lat, lng) } } }
                 if (pts.isNotEmpty()) mapView.zoomToBoundingBox(BoundingBox.fromGeoPoints(pts), true, 100)
@@ -143,33 +160,38 @@ fun FootprintsScreen(
         )
 
         Column(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp)) {
-            AnimatedVisibility(
-                visible = uiState.selectedEntry != null,
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut(),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
-            ) {
-                uiState.selectedEntry?.let { selected ->
-                    MarkerPreviewCard(
-                        item = selected,
-                        onClose = { viewModel.clearSelection() },
-                        onToggleFavorite = { viewModel.toggleFavorite(selected.entry) },
-                        onNavigate = {
-                            val (lat, lng) = selected.entry.latitude to selected.entry.longitude
-                            if (lat != null && lng != null) {
-                                val uri = Uri.parse("geo:$lat,$lng?q=$lat,$lng(${Uri.encode(selected.entry.title)})")
-                                context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-                            }
-                        }
+            if (uiState.isNavigating && uiState.navigationTarget != null && uiState.activeRoute != null) {
+                NavigationBottomPanel(
+                    targetEntry = uiState.navigationTarget!!,
+                    route = uiState.activeRoute!!,
+                    onStopNavigation = { viewModel.stopNavigation() },
+                    onRecenterRoute = {
+                        NavigationRouteOverlay.renderRoute(mapView, uiState.activeRoute, autoZoom = true)
+                    }
+                )
+            } else {
+                AnimatedVisibility(
+                    visible = uiState.selectedEntry != null,
+                    enter = slideInVertically { it } + fadeIn(),
+                    exit = slideOutVertically { it } + fadeOut(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
+                ) {
+                    uiState.selectedEntry?.let { selected ->
+                        MarkerPreviewCard(
+                            item = selected,
+                            onClose = { viewModel.clearSelection() },
+                            onToggleFavorite = { viewModel.toggleFavorite(selected.entry) },
+                            onNavigate = { viewModel.startNavigation(selected) }
+                        )
+                    }
+                }
+
+                if (uiState.entriesWithLocation.isEmpty() && !uiState.isLoading && showEmptyHint) {
+                    FootprintsEmptyState(
+                        onPinDishes = { viewModel.autoResolveMissingLocations() },
+                        onDismiss = { showEmptyHint = false }
                     )
                 }
-            }
-
-            if (uiState.entriesWithLocation.isEmpty() && !uiState.isLoading && showEmptyHint) {
-                FootprintsEmptyState(
-                    onPinDishes = { viewModel.autoResolveMissingLocations() },
-                    onDismiss = { showEmptyHint = false }
-                )
             }
         }
     }

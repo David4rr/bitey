@@ -15,7 +15,13 @@ sealed class Screen(
     val iconResId: Int? = null
 ) {
     data object Journal : Screen("journal", "Journal", com.bitey.app.R.drawable.ic_doodle_menu_book)
-    data object Footprints : Screen("footprints", "Footprints", com.bitey.app.R.drawable.ic_doodle_place)
+    data object Footprints : Screen("footprints", "Footprints", com.bitey.app.R.drawable.ic_doodle_place) {
+        const val ROUTE_WITH_ARGS = "footprints?targetEntryId={targetEntryId}"
+
+        fun createRoute(targetEntryId: Long? = null): String {
+            return if (targetEntryId != null) "footprints?targetEntryId=$targetEntryId" else "footprints"
+        }
+    }
     data object NewEntry : Screen("new_entry", "Capture", com.bitey.app.R.drawable.ic_doodle_camera_alt)
     data object FateTable : Screen("fate_table", "Fate's Table", com.bitey.app.R.drawable.ic_doodle_auto_awesome)
     data object Scrapbook : Screen("scrapbook", "Scrapbook", com.bitey.app.R.drawable.ic_doodle_collections)

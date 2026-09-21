@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun FateTableScreen(
     onNavigateToNewEntry: () -> Unit = {},
+    onNavigateToFootprints: (Long) -> Unit = {},
     onNavigateBack: (() -> Unit)? = null,
     viewModel: FateTableViewModel = hiltViewModel()
 ) {
@@ -147,16 +148,12 @@ fun FateTableScreen(
     }
 
     if (uiState.showWinningDialog && uiState.winningEntry != null) {
+        val winningId = uiState.winningEntry!!.entry.id
         WinningDishBottomSheet(
             entryWithTags = uiState.winningEntry!!,
             onDismiss = { viewModel.dismissWinningDialog() },
             onNavigate = {
-                val lat = uiState.winningEntry!!.entry.latitude
-                val lng = uiState.winningEntry!!.entry.longitude
-                if (lat != null && lng != null) {
-                    val uri = Uri.parse("geo:$lat,$lng?q=$lat,$lng(${Uri.encode(uiState.winningEntry!!.entry.title)})")
-                    context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-                }
+                onNavigateToFootprints(winningId)
             }
         )
     }
