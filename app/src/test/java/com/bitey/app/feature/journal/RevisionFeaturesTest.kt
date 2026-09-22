@@ -286,4 +286,31 @@ class RevisionFeaturesTest {
             assertTrue("Ignores .agents/", gitignoreText.contains(".agents/"))
         }
     }
+
+    @Test
+    fun scrollUpToDelete_stationaryMorphContract() {
+        val zoneFile = java.io.File("src/main/java/com/bitey/app/feature/journal/component/ScrollUpToDeleteZone.kt")
+        assertTrue("ScrollUpToDeleteZone exists", zoneFile.exists())
+        val zoneText = zoneFile.readText()
+
+        // Stationary morph: uses AnimatedContent with springy feel
+        assertTrue("Uses AnimatedContent for in-place morph", zoneText.contains("AnimatedContent"))
+        assertTrue("Uses spring bounce for morph transition", zoneText.contains("Spring.DampingRatioMediumBouncy"))
+
+        // Minimalist: no Surface container
+        assertFalse("Clean minimalist: no Surface container", zoneText.contains("Surface("))
+
+        // Haptic feedback & tactile feel
+        assertTrue("Uses haptic feedback", zoneText.contains("HapticFeedbackType"))
+
+        // Clean, rounded icons
+        assertTrue("Uses Icons.Rounded.Delete", zoneText.contains("Icons.Rounded.Delete"))
+        assertTrue("Uses Icons.Rounded.KeyboardArrowUp", zoneText.contains("Icons.Rounded.KeyboardArrowUp"))
+
+        // Embedded cleanly in JournalDetailSheet
+        val sheetFile = java.io.File("src/main/java/com/bitey/app/feature/journal/component/JournalDetailSheet.kt")
+        assertTrue("JournalDetailSheet exists", sheetFile.exists())
+        val sheetText = sheetFile.readText()
+        assertTrue("Directly embeds ScrollUpToDeleteZone", sheetText.contains("ScrollUpToDeleteZone"))
+    }
 }
