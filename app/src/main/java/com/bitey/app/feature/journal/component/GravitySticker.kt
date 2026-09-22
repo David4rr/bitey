@@ -106,13 +106,16 @@ private fun ModularStickerItem(
     val maxDragX = ((containerSize.width - stickerPx) / 2f).coerceAtLeast(10f)
     val maxDragY = ((containerSize.height - stickerPx) / 2f).coerceAtLeast(10f)
 
+    val cachedPos = remember(file.absolutePath) { StickerPositionCache.getPosition(file.absolutePath, initialOffset) }
     var isDragging by remember { mutableStateOf(false) }
-    var dragX by remember { mutableFloatStateOf(0f) }
-    var dragY by remember { mutableFloatStateOf(0f) }
+    var dragX by remember { mutableFloatStateOf(cachedPos.first) }
+    var dragY by remember { mutableFloatStateOf(cachedPos.second) }
+    var userOffsetX by remember(file.absolutePath) { mutableFloatStateOf(cachedPos.first) }
+    var userOffsetY by remember(file.absolutePath) { mutableFloatStateOf(cachedPos.second) }
 
     val scatterSpread = if (totalCount > 1) (index - (totalCount - 1) / 2f) * 22f * density.density else 0f
-    val targetPhysicsX = if (isGravityEnabled) (tiltX * maxDragX + scatterSpread).coerceIn(-maxDragX, maxDragX) else initialOffset.first
-    val targetPhysicsY = if (isGravityEnabled) (tiltY * maxDragY).coerceIn(-maxDragY, maxDragY) else initialOffset.second
+    val targetPhysicsX = if (isGravityEnabled) (tiltX * maxDragX + scatterSpread).coerceIn(-maxDragX, maxDragX) else userOffsetX
+    val targetPhysicsY = if (isGravityEnabled) (tiltY * maxDragY).coerceIn(-maxDragY, maxDragY) else userOffsetY
 
     val physicsX by animateFloatAsState(
         targetValue = if (isDragging) dragX else targetPhysicsX,
@@ -145,12 +148,15 @@ private fun ModularStickerItem(
             .pointerInput(maxDragX, maxDragY, isGravityEnabled) {
                 detectDragGestures(
                     onDragStart = { isDragging = true; dragX = physicsX; dragY = physicsY },
-                    onDragEnd = { isDragging = false },
-                    onDragCancel = { isDragging = false }
+                    onDragEnd = { isDragging = false; userOffsetX = dragX; userOffsetY = dragY; StickerPositionCache.setPosition(file.absolutePath, dragX, dragY) },
+                    onDragCancel = { isDragging = false; userOffsetX = dragX; userOffsetY = dragY; StickerPositionCache.setPosition(file.absolutePath, dragX, dragY) }
                 ) { change, dragAmount ->
                     change.consume()
                     dragX = (dragX + dragAmount.x).coerceIn(-maxDragX, maxDragX)
                     dragY = (dragY + dragAmount.y).coerceIn(-maxDragY, maxDragY)
+                    userOffsetX = dragX
+                    userOffsetY = dragY
+                    StickerPositionCache.setPosition(file.absolutePath, dragX, dragY)
                 }
             },
         contentAlignment = Alignment.Center

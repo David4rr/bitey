@@ -35,7 +35,9 @@ fun HistoryGridPlateCard(
     val formattedDate = remember(plate.timestamp) { dateFormat.format(Date(plate.timestamp)) }
     val bookCoverShape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 22.dp, bottomEnd = 22.dp)
 
-    var isGravityEnabled by remember(plate.id) { mutableStateOf(false) }
+    var isGravityEnabled by remember(plate.id) {
+        mutableStateOf(StickerPositionCache.isGravityEnabled(plate.id, default = false))
+    }
 
     Box(
         modifier = modifier
@@ -75,7 +77,11 @@ fun HistoryGridPlateCard(
                 BookCoverPlateHeader(
                     plate = plate,
                     isGravityEnabled = isGravityEnabled,
-                    onToggleGravity = { isGravityEnabled = !isGravityEnabled },
+                    onToggleGravity = {
+                        val next = !isGravityEnabled
+                        isGravityEnabled = next
+                        StickerPositionCache.setGravityEnabled(plate.id, next)
+                    },
                     onToggleFavorite = onToggleFavorite
                 )
 
