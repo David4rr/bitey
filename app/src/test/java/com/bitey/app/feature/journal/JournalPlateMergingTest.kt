@@ -124,4 +124,38 @@ class JournalPlateMergingTest {
         assertEquals(2, plates.first().entries.size)
         assertEquals(sessionId, plates.first().id)
     }
+
+    @Test
+    fun plateTitle_forSingleDishWithVenue_returnsDishTitleNotVenue() {
+        val dish = createEntry(1L, "Tonkotsu Ramen", "Ichiran Ramen", 1000L)
+        val plates = JournalViewModel.clusterIntoPlates(listOf(dish))
+
+        assertEquals(1, plates.size)
+        val plate = plates.first()
+        assertFalse(plate.isMergedPlate)
+        assertEquals("Tonkotsu Ramen", plate.title)
+        assertEquals("Ichiran Ramen", plate.venueName)
+    }
+
+    @Test
+    fun plateTitle_forMergedDishesWithVenue_returnsVenueName() {
+        val dish1 = createEntry(1L, "Tonkotsu Ramen", "Ichiran Ramen", 1000L)
+        val dish2 = createEntry(2L, "Gyoza", "Ichiran Ramen", 1000L + 60_000L)
+        val plates = JournalViewModel.clusterIntoPlates(listOf(dish2, dish1))
+
+        assertEquals(1, plates.size)
+        val plate = plates.first()
+        assertTrue(plate.isMergedPlate)
+        assertEquals("Ichiran Ramen", plate.title)
+    }
+
+    @Test
+    fun plateTitle_forSingleDishBlankTitle_returnsMealTypeLabel() {
+        val dish = createEntry(1L, "", "Some Cafe", 1000L, mealType = MealType.DRINK)
+        val plates = JournalViewModel.clusterIntoPlates(listOf(dish))
+
+        assertEquals(1, plates.size)
+        val plate = plates.first()
+        assertEquals(MealType.DRINK.label, plate.title)
+    }
 }

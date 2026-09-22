@@ -91,7 +91,7 @@ class EntryEditorViewModel @Inject constructor(
             current.copy(mealType = mealType, dishTitle = updatedTitle)
         }
     }
-    fun updateRating(rating: Float) { _uiState.update { it.copy(rating = rating.coerceIn(1.0f, 5.0f)) } }
+    fun updateRating(rating: Float) { _uiState.update { it.copy(rating = rating.coerceIn(0.0f, 5.0f)) } }
     fun updateCurrency(currency: String) { _uiState.update { it.copy(currency = currency) } }
     fun toggleFavorite() { _uiState.update { it.copy(isFavorite = !it.isFavorite) } }
     fun toggleStickerMode() { _uiState.update { it.copy(isStickerMode = !it.isStickerMode) } }
@@ -154,7 +154,6 @@ class EntryEditorViewModel @Inject constructor(
             _uiState.update { current ->
                 current.copy(
                     geocodedAddress = locName,
-                    locationName = current.locationName.ifBlank { locName },
                     isLocating = false
                 )
             }
@@ -168,7 +167,7 @@ class EntryEditorViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(dishTitle = effectiveTitle, isSaving = true, errorMessage = null) }
             try {
-                val effectiveLocation = state.locationName.trim().takeIf { it.isNotBlank() } ?: state.geocodedAddress
+                val effectiveLocation = state.locationName.trim().takeIf { it.isNotBlank() }
                 val recent = if (!effectiveLocation.isNullOrBlank()) {
                     val minTime = state.timestamp - (2 * 60 * 60 * 1000L)
                     plateEntryDao.findRecentEntryAtVenue(effectiveLocation, minTime)

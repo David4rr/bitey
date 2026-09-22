@@ -5,9 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.bitey.app.core.database.dao.PlateEntryDao
 import com.bitey.app.core.database.model.PlateEntryEntity
 import com.bitey.app.core.database.model.PlateEntryWithTags
-import com.bitey.app.core.location.LocationCoordinates
-import com.bitey.app.core.location.LocationProvider
-import com.bitey.app.core.location.RouteRepository
+import com.bitey.app.core.location.*
 import com.bitey.app.core.location.model.NavigationRoute
 import com.bitey.app.feature.footprints.component.LocationFallbackResolver
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,124 +13,136 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.abs
 
 @HiltViewModel
 class FootprintsViewModel @Inject constructor(
     private val plateEntryDao: PlateEntryDao,
     private val locationProvider: LocationProvider,
-    private val geocoderRepository: com.bitey.app.core.location.GeocoderRepository,
+    private val geocoderRepository: GeocoderRepository,
     private val routeRepository: RouteRepository
 ) : ViewModel() {
 
-    private val _selectedEntry = MutableStateFlow<PlateEntryWithTags?>(null)
+    private val _selectedSpotId = MutableStateFlow<String?>(null)
+    private val _selectedEntryId = MutableStateFlow<Long?>(null)
     private val _deviceLocation = MutableStateFlow<LocationCoordinates?>(null)
     private val _searchQuery = MutableStateFlow("")
     private val _isFavoritesOnly = MutableStateFlow(false)
     private val _navigationTarget = MutableStateFlow<PlateEntryWithTags?>(null)
     private val _activeRoute = MutableStateFlow<NavigationRoute?>(null)
     private val _currentStepIndex = MutableStateFlow(0)
+    private val _favOverrides = MutableStateFlow<Map<Long, Boolean>>(emptyMap())
 
     val deviceLocation: StateFlow<LocationCoordinates?> = _deviceLocation
 
     val uiState: StateFlow<FootprintsUiState> = combine(
-        plateEntryDao.getAllEntriesWithTags(),
-        _selectedEntry,
-        _searchQuery,
-        _isFavoritesOnly,
-        _navigationTarget,
-        _activeRoute,
-        _currentStepIndex
-    ) { args: Array<Any?> ->
-        @Suppress("UNCHECKED_CAST")
-        val allEntries = args[0] as List<PlateEntryWithTags>
-        val selected = args[1] as? PlateEntryWithTags
-        val query = args[2] as String
-        val favOnly = args[3] as Boolean
-        val navTarget = args[4] as? PlateEntryWithTags
-        val route = args[5] as? NavigationRoute
-        val stepIdx = args[6] as Int
+        listOf(
+            plateEntryDao.getAllEntriesWithTags(),
+            _selectedSpotId, _selectedEntryId, _searchQuery,
+            _isFavoritesOnly, _navigationTarget, _activeRoute, _favOverrides
+        )
+    ) { args ->
+        @Suppress("UNCHECKED_CAST") val allEntries = args[0] as List<PlateEntryWithTags>
+        val spotId = args[1] as? String
+        val entryId = args[2] as? Long
+        val query = args[3] as String
+        val favOnly = args[4] as Boolean
+        val navTarget = args[5] as? PlateEntryWithTags
+        val route = args[6] as? NavigationRoute
+        @Suppress("UNCHECKED_CAST") val favMap = args[7] as Map<Long, Boolean>
 
         val locationEntries = allEntries.map { item ->
-            val e = item.entry
-            if (e.latitude != null && e.longitude != null && e.latitude != 0.0 && e.longitude != 0.0) {
-                item
-            } else {
-                val quick = LocationFallbackResolver.resolveQuickCoordinates(e.locationName, e.title, e.id, _deviceLocation.value)
-                item.copy(entry = e.copy(latitude = quick.latitude, longitude = quick.longitude))
+            val fav = favMap[item.entry.id] ?: item.entry.isFavorite
+            val itm = if (fav != item.entry.isFavorite) item.copy(entry = item.entry.copy(isFavorite = fav)) else item
+            val fe = itm.entry
+            if (fe.latitude != null && fe.longitude != null && fe.latitude != 0.0 && fe.longitude != 0.0) itm
+            else {
+                val q = LocationFallbackResolver.resolveQuickCoordinates(fe.locationName, fe.title, fe.id, _deviceLocation.value)
+                itm.copy(entry = fe.copy(latitude = q.latitude, longitude = q.longitude))
             }
         }
-        val trimmedQuery = query.trim()
+
+        val trimmed = query.trim()
         val filtered = locationEntries.filter { item ->
             if (favOnly && !item.entry.isFavorite) return@filter false
-            if (trimmedQuery.isNotBlank()) {
-                val matchesTitle = item.entry.title.contains(trimmedQuery, ignoreCase = true)
-                val matchesLocation = item.entry.locationName?.contains(trimmedQuery, ignoreCase = true) == true
-                val matchesTag = item.tags.any { it.tagName.contains(trimmedQuery, ignoreCase = true) }
-                if (!matchesTitle && !matchesLocation && !matchesTag) return@filter false
-            }
-            true
+            if (trimmed.isBlank()) true else (item.entry.title.contains(trimmed, true) ||
+                item.entry.locationName?.contains(trimmed, true) == true ||
+                item.tags.any { it.tagName.contains(trimmed, true) })
         }
 
-        val favCount = locationEntries.count { it.entry.isFavorite }
+        val spots = clusterSpots(filtered)
+        val selectedSpot = spots.find { s -> s.id == spotId || (entryId != null && s.entries.any { it.entry.id == entryId }) }
+        val selectedEntry = filtered.find { it.entry.id == entryId } ?: selectedSpot?.primaryEntry
 
         FootprintsUiState(
-            entriesWithLocation = filtered,
-            selectedEntry = selected,
-            searchQuery = query,
-            isFavoritesOnly = favOnly,
-            allVisitedCount = locationEntries.size,
-            favoriteSpotsCount = favCount,
-            isLoading = false,
-            navigationTarget = navTarget,
-            activeRoute = route,
-            currentStepIndex = stepIdx,
-            isNavigating = navTarget != null && route != null
+            entriesWithLocation = filtered, spots = spots, selectedSpot = selectedSpot,
+            selectedEntry = selectedEntry, searchQuery = query, isFavoritesOnly = favOnly,
+            allVisitedCount = locationEntries.size, favoriteSpotsCount = locationEntries.count { it.entry.isFavorite },
+            isLoading = false, navigationTarget = navTarget, activeRoute = route,
+            currentStepIndex = _currentStepIndex.value, isNavigating = navTarget != null && route != null
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000L),
-        initialValue = FootprintsUiState()
-    )
+    }.stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(5000L), initialValue = FootprintsUiState())
 
     init {
         fetchDeviceLocation()
         autoResolveMissingLocations()
     }
 
+    private fun clusterSpots(entries: List<PlateEntryWithTags>): List<FootprintSpot> {
+        val list = mutableListOf<FootprintSpot>()
+        for (item in entries) {
+            val lat = item.entry.latitude ?: continue
+            val lng = item.entry.longitude ?: continue
+            val idx = list.indexOfFirst { abs(it.latitude - lat) < 0.0003 && abs(it.longitude - lng) < 0.0003 }
+            if (idx != -1) {
+                list[idx] = list[idx].copy(entries = list[idx].entries + item)
+            } else {
+                val id = "spot_${(lat * 10000).toInt()}_${(lng * 10000).toInt()}"
+                list.add(FootprintSpot(id, lat, lng, item.entry.locationName, listOf(item)))
+            }
+        }
+        return list
+    }
+
     fun hasLocationPermission(): Boolean = locationProvider.hasLocationPermission()
+
+    fun selectSpot(spot: FootprintSpot?) {
+        if (_navigationTarget.value == null) {
+            _selectedSpotId.value = spot?.id
+            _selectedEntryId.value = spot?.primaryEntry?.entry?.id
+        }
+    }
 
     fun selectEntry(entry: PlateEntryWithTags?) {
         if (_navigationTarget.value == null) {
-            _selectedEntry.value = entry
+            _selectedEntryId.value = entry?.entry?.id
+            val lat = entry?.entry?.latitude
+            val lng = entry?.entry?.longitude
+            if (lat != null && lng != null) {
+                _selectedSpotId.value = uiState.value.spots.find { abs(it.latitude - lat) < 0.0003 && abs(it.longitude - lng) < 0.0003 }?.id
+            }
         }
     }
 
     fun clearSelection() {
-        _selectedEntry.value = null
+        _selectedSpotId.value = null
+        _selectedEntryId.value = null
     }
 
     fun startNavigation(entry: PlateEntryWithTags) {
-        val destLat = entry.entry.latitude ?: return
-        val destLng = entry.entry.longitude ?: return
+        val lat = entry.entry.latitude ?: return
+        val lng = entry.entry.longitude ?: return
         viewModelScope.launch {
-            val startCoords = _deviceLocation.value
-                ?: locationProvider.getCurrentLocation(timeoutMillis = 4000L)
-                ?: LocationCoordinates(-6.2088, 106.8456)
-            _selectedEntry.value = null
+            val start = _deviceLocation.value ?: locationProvider.getCurrentLocation(4000L) ?: LocationCoordinates(-6.2088, 106.8456)
+            clearSelection()
             _navigationTarget.value = entry
-            val route = routeRepository.getRoute(startCoords, LocationCoordinates(destLat, destLng))
-            _activeRoute.value = route
+            _activeRoute.value = routeRepository.getRoute(start, LocationCoordinates(lat, lng))
             _currentStepIndex.value = 0
         }
     }
 
-    fun startNavigationForEntryId(entryId: Long) {
-        viewModelScope.launch {
-            val entry = plateEntryDao.getEntryById(entryId).firstOrNull()
-            if (entry != null) {
-                startNavigation(entry)
-            }
-        }
+    fun startNavigationForEntryId(id: Long) {
+        viewModelScope.launch { plateEntryDao.getEntryById(id).firstOrNull()?.let { startNavigation(it) } }
     }
 
     fun stopNavigation() {
@@ -143,9 +153,8 @@ class FootprintsViewModel @Inject constructor(
 
     fun fetchDeviceLocation() {
         viewModelScope.launch {
-            val location = locationProvider.getCurrentLocation()
-            if (location != null) {
-                _deviceLocation.value = location
+            locationProvider.getCurrentLocation()?.let {
+                _deviceLocation.value = it
                 autoResolveMissingLocations()
             }
         }
@@ -155,36 +164,12 @@ class FootprintsViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val missing = plateEntryDao.getEntriesWithMissingLocation()
             if (missing.isEmpty()) return@launch
-
-            val stillMissing = mutableListOf<PlateEntryEntity>()
             for (entry in missing) {
-                val locName = entry.locationName?.trim()
-                var resolved = false
-                if (!locName.isNullOrBlank()) {
-                    val coords = geocoderRepository.forwardGeocode(locName)
-                    if (coords != null) {
-                        plateEntryDao.updateEntry(entry.copy(latitude = coords.latitude, longitude = coords.longitude))
-                        resolved = true
+                val loc = entry.locationName?.trim()
+                if (!loc.isNullOrBlank()) {
+                    geocoderRepository.forwardGeocode(loc)?.let {
+                        plateEntryDao.updateEntry(entry.copy(latitude = it.latitude, longitude = it.longitude))
                     }
-                }
-                if (!resolved) stillMissing.add(entry)
-            }
-
-            if (stillMissing.isNotEmpty()) {
-                val devLoc = _deviceLocation.value ?: locationProvider.getCurrentLocation(timeoutMillis = 4000L)
-                val fallbackName = devLoc?.let { geocoderRepository.reverseGeocode(it.latitude, it.longitude)?.displayName } ?: "Food Spot"
-                for (entry in stillMissing) {
-                    val targetCoords = devLoc ?: run {
-                        val h = kotlin.math.abs((entry.title + entry.id).hashCode())
-                        LocationCoordinates(-6.2088 + ((h % 1000) / 1000.0 - 0.5) * 0.03, 106.8456 + (((h / 1000) % 1000) / 1000.0 - 0.5) * 0.03)
-                    }
-                    plateEntryDao.updateEntry(
-                        entry.copy(
-                            latitude = targetCoords.latitude,
-                            longitude = targetCoords.longitude,
-                            locationName = entry.locationName ?: fallbackName
-                        )
-                    )
                 }
             }
         }
@@ -192,9 +177,10 @@ class FootprintsViewModel @Inject constructor(
 
     fun updateSearchQuery(query: String) { _searchQuery.value = query }
     fun toggleFavoritesOnly() { _isFavoritesOnly.update { !it } }
+
     fun toggleFavorite(entry: PlateEntryEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
-            plateEntryDao.updateFavoriteStatus(entry.id, !entry.isFavorite)
-        }
+        val newFav = !entry.isFavorite
+        _favOverrides.update { it + (entry.id to newFav) }
+        viewModelScope.launch(Dispatchers.IO) { plateEntryDao.updateFavoriteStatus(entry.id, newFav) }
     }
 }

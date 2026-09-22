@@ -50,8 +50,15 @@ class StickerCompositor @Inject constructor(
         shadowBlurPx: Float = 8f,
         shadowOffsetYPx: Float = 6f
     ): CompositedSticker = withContext(Dispatchers.Default) {
-        val croppedForeground = ImageTransformUtils.cropTransparentBounds(foregroundBitmap)
-        val shouldRecycleCropped = croppedForeground != foregroundBitmap
+        val safeForeground = if (foregroundBitmap.config == Bitmap.Config.HARDWARE) {
+            foregroundBitmap.copy(Bitmap.Config.ARGB_8888, false) ?: foregroundBitmap
+        } else {
+            foregroundBitmap
+        }
+        val shouldRecycleSafe = safeForeground != foregroundBitmap
+
+        val croppedForeground = ImageTransformUtils.cropTransparentBounds(safeForeground)
+        val shouldRecycleCropped = croppedForeground != safeForeground && croppedForeground != foregroundBitmap
 
         val margin = (strokeWidthPx + shadowBlurPx + shadowOffsetYPx + 8f).toInt()
         val outWidth = croppedForeground.width + (margin * 2)
@@ -110,6 +117,9 @@ class StickerCompositor @Inject constructor(
         outlineBitmap.recycle()
         if (shouldRecycleCropped) {
             croppedForeground.recycle()
+        }
+        if (shouldRecycleSafe) {
+            safeForeground.recycle()
         }
 
         // 7. Save to internal WebP file

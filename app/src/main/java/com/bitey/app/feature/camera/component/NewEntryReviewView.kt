@@ -150,7 +150,7 @@ fun NewEntryReviewView(
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = theme.inkPrimary
             )
-            if (isStickerMode) {
+            if (isStickerMode && candidates.size <= 1) {
                 OutlinedButton(
                     onClick = onCutItMyselfClick,
                     shape = RoundedCornerShape(12.dp),
@@ -194,9 +194,11 @@ fun NewEntryReviewView(
                                 modifier = Modifier
                                     .size(72.dp)
                                     .clip(RoundedCornerShape(14.dp))
-                                    .background(theme.surfaceVariant)
-                                    .clickable { onToggleCandidate(item.id) }
-                                    .padding(6.dp),
+                                    .then(
+                                        if (isStickerMode) Modifier.background(theme.surfaceVariant).padding(6.dp)
+                                        else Modifier
+                                    )
+                                    .clickable { onToggleCandidate(item.id) },
                                 contentAlignment = Alignment.Center
                             ) {
                                 AsyncImage(
@@ -207,7 +209,7 @@ fun NewEntryReviewView(
                                         .fillMaxSize()
                                         .then(
                                             if (isStickerMode) Modifier.dieCutStickerEffect()
-                                            else Modifier.clip(RoundedCornerShape(10.dp))
+                                            else Modifier.clip(RoundedCornerShape(14.dp))
                                         )
                                 )
                             }

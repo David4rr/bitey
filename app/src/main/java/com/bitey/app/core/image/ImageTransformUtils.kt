@@ -111,10 +111,15 @@ object ImageTransformUtils {
      * removing all empty transparent margins so the subject fills its layout bounds.
      */
     fun cropTransparentBounds(bitmap: Bitmap, paddingPx: Int = 4): Bitmap {
-        val width = bitmap.width
-        val height = bitmap.height
+        val safeBitmap = if (bitmap.config == Bitmap.Config.HARDWARE) {
+            bitmap.copy(Bitmap.Config.ARGB_8888, false) ?: bitmap
+        } else {
+            bitmap
+        }
+        val width = safeBitmap.width
+        val height = safeBitmap.height
         val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        safeBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
 
         var minX = width
         var minY = height
@@ -134,18 +139,25 @@ object ImageTransformUtils {
             }
         }
 
-        if (maxX < minX || maxY < minY) return bitmap
+        if (maxX < minX || maxY < minY) {
+            if (safeBitmap != bitmap) safeBitmap.recycle()
+            return bitmap
+        }
 
         val cropX = (minX - paddingPx).coerceAtLeast(0)
         val cropY = (minY - paddingPx).coerceAtLeast(0)
-        val cropW = (maxX - cropX + 1 + paddingPx).coerceAtMost(width - cropX)
-        val cropH = (maxY - cropY + 1 + paddingPx).coerceAtMost(height - cropY)
+        val cropW = (maxX - cropX + 1 + paddingPx).coerceIn(1, width - cropX)
+        val cropH = (maxY - cropY + 1 + paddingPx).coerceIn(1, height - cropY)
 
-        return if (cropX == 0 && cropY == 0 && cropW == width && cropH == height) {
-            bitmap
+        val cropped = if (cropX == 0 && cropY == 0 && cropW == width && cropH == height) {
+            safeBitmap
         } else {
-            Bitmap.createBitmap(bitmap, cropX, cropY, cropW, cropH)
+            Bitmap.createBitmap(safeBitmap, cropX, cropY, cropW, cropH)
         }
+        if (safeBitmap != bitmap && safeBitmap != cropped) {
+            safeBitmap.recycle()
+        }
+        return cropped
     }
 }
 

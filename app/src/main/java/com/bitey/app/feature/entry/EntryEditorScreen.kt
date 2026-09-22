@@ -152,7 +152,7 @@ fun EntryEditorScreen(
     if (uiState.isNewTagDialogOpen) {
         NewTagDialog(
             onDismiss = { viewModel.dismissNewTagDialog() },
-            onConfirm = { name, category -> viewModel.createAndSelectTag(name, category) }
+            onConfirm = { name -> viewModel.createAndSelectTag(name, null) }
         )
     }
 }

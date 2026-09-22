@@ -1,13 +1,7 @@
 package com.bitey.app.feature.footprints.component
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.Rect
-import android.graphics.RectF
+import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.util.LruCache
 import androidx.compose.ui.graphics.toArgb
@@ -21,169 +15,138 @@ object DishMarkerRenderer {
 
     private val markerIconCache = LruCache<String, BitmapDrawable>(120)
 
-    fun clearCache() {
-        markerIconCache.evictAll()
-    }
+    fun clearCache() { markerIconCache.evictAll() }
 
     fun getOrCreateDishMarkerIcon(
         context: Context,
         imagePath: String?,
-        isSticker: Boolean
+        secondaryImagePath: String? = null,
+        isSticker: Boolean = false,
+        count: Int = 1
     ): BitmapDrawable {
-        val cacheKey = "${imagePath.orEmpty()}_$isSticker"
+        val cacheKey = "${imagePath.orEmpty()}_${secondaryImagePath.orEmpty()}_${isSticker}_$count"
         markerIconCache.get(cacheKey)?.let { return it }
 
         val dishBitmap = loadDishBitmap(imagePath, targetSize = 120)
-        val markerDrawable = createDishMarkerIcon(context, dishBitmap, isSticker)
+        val secondBitmap = if (count > 1 && !secondaryImagePath.isNullOrBlank()) loadDishBitmap(secondaryImagePath, targetSize = 120) else null
+        val markerDrawable = createDishMarkerIcon(context, dishBitmap, secondBitmap, isSticker, count)
         markerIconCache.put(cacheKey, markerDrawable)
         return markerDrawable
     }
 
     fun loadDishBitmap(imagePath: String?, targetSize: Int = 120): Bitmap? {
-        if (imagePath.isNullOrBlank()) return null
-        val file = File(imagePath)
+        val file = imagePath?.let { File(it) } ?: return null
         if (!file.exists() || !file.canRead()) return null
-
         return try {
-            val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeFile(file.absolutePath, boundsOptions)
-            if (boundsOptions.outWidth <= 0 || boundsOptions.outHeight <= 0) return null
-
-            val sampleSize = ImageTransformUtils.calculateInSampleSize(
-                boundsOptions.outWidth,
-                boundsOptions.outHeight,
-                targetSize,
-                targetSize
-            )
-            val decodeOptions = BitmapFactory.Options().apply {
-                inSampleSize = sampleSize
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, bounds)
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+            val sample = ImageTransformUtils.calculateInSampleSize(bounds.outWidth, bounds.outHeight, targetSize, targetSize)
+            BitmapFactory.decodeFile(file.absolutePath, BitmapFactory.Options().apply {
+                inSampleSize = sample
                 inPreferredConfig = Bitmap.Config.ARGB_8888
-            }
-            BitmapFactory.decodeFile(file.absolutePath, decodeOptions)
-        } catch (_: Exception) {
-            null
-        }
+            })
+        } catch (_: Exception) { null }
     }
 
     fun createDishMarkerIcon(
         context: Context,
         dishBitmap: Bitmap?,
-        isSticker: Boolean = false
+        secondBitmap: Bitmap? = null,
+        isSticker: Boolean = false,
+        count: Int = 1
     ): BitmapDrawable {
-        val width = 120
-        val height = 140
+        val width = 144
+        val height = 152
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
-        val cx = 60f
-        val cy = 54f
-        val r = 46f
-        val tipX = 60f
-        val tipY = 140f
+        val cx = 64f
+        val cy = 66f
+        val r = 42f
+        val tipX = 64f
+        val tipY = 150f
 
         val pinPath = Path().apply {
-            arcTo(
-                RectF(cx - r, cy - r, cx + r, cy + r),
-                148f,
-                244f,
-                false
-            )
+            arcTo(RectF(cx - r, cy - r, cx + r, cy + r), 148f, 244f, false)
             lineTo(tipX, tipY)
             close()
         }
 
-        // 1. Drop shadow offset
-        val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = android.graphics.Color.argb(45, 0, 0, 0)
-        }
-        val shadowPath = Path(pinPath).apply {
-            offset(0f, 3.5f)
-        }
-        canvas.drawPath(shadowPath, shadowPaint)
+        // When multiple dishes, render back stacked image circle offset to top-right
+        if (count > 1) {
+            val backCx = cx + 22f
+            val backCy = cy - 14f
+            val backR = 34f
 
-        // 2. White die-cut outer body
-        val whiteBodyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = android.graphics.Color.WHITE
-            style = Paint.Style.FILL
-        }
-        canvas.drawPath(pinPath, whiteBodyPaint)
+            canvas.drawCircle(backCx, backCy + 3f, backR, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(40, 0, 0, 0) })
+            canvas.drawCircle(backCx, backCy, backR, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
 
-        // 3. Orange accent outline
-        val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = BiteyOrange.toArgb()
-            style = Paint.Style.STROKE
-            strokeWidth = 3f
+            val bmpToDraw = secondBitmap ?: dishBitmap
+            if (bmpToDraw != null && bmpToDraw.width > 0 && bmpToDraw.height > 0) {
+                val saveBack = canvas.save()
+                canvas.clipPath(Path().apply { addCircle(backCx, backCy, backR - 2f, Path.Direction.CW) })
+                val bW = bmpToDraw.width.toFloat()
+                val bH = bmpToDraw.height.toFloat()
+                val scale = if (isSticker) min((backR * 2f - 4f) / bW, (backR * 2f - 4f) / bH) else max((backR * 2f) / bW, (backR * 2f) / bH)
+                val dW = bW * scale
+                val dH = bH * scale
+                canvas.drawBitmap(bmpToDraw, Rect(0, 0, bmpToDraw.width, bmpToDraw.height),
+                    RectF(backCx - dW / 2f, backCy - dH / 2f, backCx + dW / 2f, backCy + dH / 2f),
+                    Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
+                canvas.restoreToCount(saveBack)
+            } else {
+                canvas.drawCircle(backCx, backCy, backR - 2f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#FFE8D6") })
+            }
+            canvas.drawCircle(backCx, backCy, backR, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = BiteyOrange.toArgb(); style = Paint.Style.STROKE; strokeWidth = 2.5f })
         }
-        canvas.drawPath(pinPath, strokePaint)
 
-        // 4. Inner image cutout circle
-        val innerRadius = 38f
-        val innerBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = android.graphics.Color.parseColor("#FFF8F0")
-            style = Paint.Style.FILL
-        }
-        canvas.drawCircle(cx, cy, innerRadius, innerBgPaint)
+        // Shadow & body for front pin
+        val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(45, 0, 0, 0) }
+        canvas.drawPath(Path(pinPath).apply { offset(0f, 3.5f) }, shadowPaint)
+        canvas.drawPath(pinPath, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
+        canvas.drawPath(pinPath, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = BiteyOrange.toArgb(); style = Paint.Style.STROKE; strokeWidth = 3f })
+
+        // Inner circle
+        val innerR = 34f
+        canvas.drawCircle(cx, cy, innerR, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#FFF8F0") })
 
         if (dishBitmap != null && dishBitmap.width > 0 && dishBitmap.height > 0) {
-            val saveCount = canvas.save()
-            val clipPath = Path().apply {
-                addCircle(cx, cy, innerRadius, Path.Direction.CW)
-            }
+            val save = canvas.save()
+            val clipPath = Path().apply { addCircle(cx, cy, innerR, Path.Direction.CW) }
             canvas.clipPath(clipPath)
-
             val bW = dishBitmap.width.toFloat()
             val bH = dishBitmap.height.toFloat()
-
-            if (isSticker) {
-                val availableSize = innerRadius * 2f - 6f
-                val scale = min(availableSize / bW, availableSize / bH)
-                val drawW = bW * scale
-                val drawH = bH * scale
-                val drawLeft = cx - (drawW / 2f)
-                val drawTop = cy - (drawH / 2f)
-
-                val destRect = RectF(drawLeft, drawTop, drawLeft + drawW, drawTop + drawH)
-                val srcRect = Rect(0, 0, dishBitmap.width, dishBitmap.height)
-                val imagePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-                canvas.drawBitmap(dishBitmap, srcRect, destRect, imagePaint)
-            } else {
-                val targetDiameter = innerRadius * 2f
-                val scale = max(targetDiameter / bW, targetDiameter / bH)
-                val scaledW = bW * scale
-                val scaledH = bH * scale
-                val drawLeft = cx - (scaledW / 2f)
-                val drawTop = cy - (scaledH / 2f)
-
-                val destRect = RectF(drawLeft, drawTop, drawLeft + scaledW, drawTop + scaledH)
-                val srcRect = Rect(0, 0, dishBitmap.width, dishBitmap.height)
-                val imagePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-                canvas.drawBitmap(dishBitmap, srcRect, destRect, imagePaint)
-            }
-            canvas.restoreToCount(saveCount)
-
-            val innerBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = android.graphics.Color.argb(30, 0, 0, 0)
-                style = Paint.Style.STROKE
-                strokeWidth = 1.5f
-            }
-            canvas.drawCircle(cx, cy, innerRadius, innerBorderPaint)
+            val scale = if (isSticker) min((innerR * 2f - 4f) / bW, (innerR * 2f - 4f) / bH) else max((innerR * 2f) / bW, (innerR * 2f) / bH)
+            val dW = bW * scale
+            val dH = bH * scale
+            canvas.drawBitmap(dishBitmap, Rect(0, 0, dishBitmap.width, dishBitmap.height),
+                RectF(cx - dW / 2f, cy - dH / 2f, cx + dW / 2f, cy + dH / 2f),
+                Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
+            canvas.restoreToCount(save)
+            canvas.drawCircle(cx, cy, innerR, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(30, 0, 0, 0); style = Paint.Style.STROKE; strokeWidth = 1.5f })
         } else {
-            val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = BiteyOrange.toArgb()
-            }
-            canvas.drawCircle(cx, cy, 14f, dotPaint)
-
-            val miniDotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = android.graphics.Color.WHITE
-            }
-            canvas.drawCircle(cx, cy, 6f, miniDotPaint)
+            canvas.drawCircle(cx, cy, 14f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = BiteyOrange.toArgb() })
+            canvas.drawCircle(cx, cy, 6f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE })
         }
 
-        // 5. Small dot near bottom pointer tip
-        val tipDotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = BiteyOrange.toArgb()
+        canvas.drawCircle(tipX, tipY - 8f, 3.5f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = BiteyOrange.toArgb() })
+
+        // Count badge if stacked
+        if (count > 1) {
+            val badgeX = cx + r + 2f
+            val badgeY = cy - r + 4f
+            val badgeR = 13f
+            canvas.drawCircle(badgeX, badgeY, badgeR, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = BiteyOrange.toArgb() })
+            canvas.drawCircle(badgeX, badgeY, badgeR, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.STROKE; strokeWidth = 2.5f })
+            val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                textSize = if (count > 9) 15f else 18f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                textAlign = Paint.Align.CENTER
+            }
+            canvas.drawText(if (count > 99) "99+" else count.toString(), badgeX, badgeY + 5.5f, textPaint)
         }
-        canvas.drawCircle(tipX, tipY - 8f, 3.5f, tipDotPaint)
 
         return BitmapDrawable(context.resources, bitmap)
     }

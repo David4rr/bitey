@@ -115,4 +115,28 @@ class NewEntryUiStateTest {
         assertEquals("Drink", updatedState.candidates[1].label)
         assertEquals(com.bitey.app.core.database.model.MealType.DRINK, updatedState.candidates[1].mealType)
     }
+
+    @Test
+    fun multiDishMode_cropsStickers_withFallback() {
+        val files = listOf(java.io.File("/tmp/dish1.jpg"), java.io.File("/tmp/dish2.jpg"))
+        val candidates = files.mapIndexed { idx, file ->
+            com.bitey.app.feature.camera.CandidateStickerItem(
+                originalFilePath = file.absolutePath,
+                stickerFilePath = "/tmp/sticker_${idx + 1}.webp",
+                label = "Food ${idx + 1}",
+                mealType = com.bitey.app.core.database.model.MealType.FOOD
+            )
+        }
+        val state = NewEntryUiState(
+            step = com.bitey.app.feature.camera.CaptureFlowStep.REVIEW,
+            candidates = candidates,
+            isStickerMode = true
+        )
+
+        assertEquals(2, state.candidates.size)
+        assertTrue(state.isStickerMode)
+        assertEquals("/tmp/sticker_1.webp", state.candidates[0].stickerFilePath)
+        assertEquals("/tmp/sticker_2.webp", state.candidates[1].stickerFilePath)
+    }
 }
+

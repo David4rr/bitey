@@ -19,18 +19,21 @@ data class JournalPlate(
     val primaryEntry: PlateEntryEntity get() = entries.first().entry
 
     val title: String get() {
-        return if (!venueName.isNullOrBlank()) {
+        return if (entries.size == 1) {
+            entries.first().entry.title.ifBlank { entries.first().entry.mealType.label }
+        } else if (!venueName.isNullOrBlank()) {
             venueName
-        } else if (entries.size == 1) {
-            entries.first().entry.title
-        } else {
+        } else if (entries.isNotEmpty()) {
             "Dining Plate (${entries.size} dishes)"
+        } else {
+            "Empty Plate"
         }
     }
 
     val subtitle: String get() {
         return if (entries.size == 1) {
-            entries.first().entry.mealType.label
+            val entry = entries.first().entry
+            entry.note?.takeIf { it.isNotBlank() } ?: entry.mealType.label
         } else {
             "${entries.size} dishes • ${entries.joinToString(" • ") { it.entry.title }}"
         }

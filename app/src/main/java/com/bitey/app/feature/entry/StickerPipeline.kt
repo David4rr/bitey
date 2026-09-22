@@ -35,6 +35,14 @@ class StickerPipeline @Inject constructor(
                 is SegmentationResult.Success -> {
                     try {
                         stickerCompositor.createDieCutSticker(segResult.foregroundBitmap)
+                    } catch (e: Exception) {
+                        android.util.Log.e("StickerPipeline", "createDieCutSticker failed, trying circular fallback", e)
+                        val circular = fallbackStickerCropper.createCircularSubject(bitmap)
+                        try {
+                            stickerCompositor.createDieCutSticker(circular)
+                        } finally {
+                            circular.recycle()
+                        }
                     } finally {
                         segResult.foregroundBitmap.recycle()
                     }
@@ -48,38 +56,17 @@ class StickerPipeline @Inject constructor(
                     }
                 }
             }
+        } catch (e: Exception) {
+            android.util.Log.e("StickerPipeline", "Failed to create sticker for file ${file.name}", e)
+            null
         } finally {
             bitmap.recycle()
         }
     }
 
     suspend fun createStickersForMultiSubject(file: File): List<CompositedSticker> = withContext(Dispatchers.IO) {
-        val bitmap = decodeSampledBitmap(file) ?: return@withContext emptyList()
-        val stickers = mutableListOf<CompositedSticker>()
-        try {
-            when (val segResult = foodSubjectSegmenter.segment(bitmap)) {
-                is SegmentationResult.Success -> {
-                    if (segResult.subjectBitmaps.size > 1) {
-                        for (subjBmp in segResult.subjectBitmaps) {
-                            runCatching { stickers.add(stickerCompositor.createDieCutSticker(subjBmp)) }
-                        }
-                    } else {
-                        runCatching { stickers.add(stickerCompositor.createDieCutSticker(segResult.foregroundBitmap)) }
-                    }
-                }
-                else -> {
-                    val circular = fallbackStickerCropper.createCircularSubject(bitmap)
-                    try {
-                        stickers.add(stickerCompositor.createDieCutSticker(circular))
-                    } finally {
-                        circular.recycle()
-                    }
-                }
-            }
-        } finally {
-            bitmap.recycle()
-        }
-        stickers
+        val sticker = createStickerWithFallback(file)
+        if (sticker != null) listOf(sticker) else emptyList()
     }
 
     suspend fun createManualSticker(file: File, style: StickerStyle): CompositedSticker? = withContext(Dispatchers.IO) {
@@ -139,10 +126,7 @@ class StickerPipeline @Inject constructor(
         onStatus: (String) -> Unit = {}
     ): StickerGenerationResult = withContext(Dispatchers.IO) {
         val bitmap = decodeSampledBitmap(file, maxDim = 1280)
-            ?: return@withContext StickerGenerationResult.Failure(
-                IllegalStateException("Unable to read optimized image for segmentation.")
-            )
-
+            ?: return@withContext StickerGenerationResult.Failure(IllegalStateException("Unable to read image."))
         try {
             when (style) {
                 StickerStyle.AI_SEGMENTED -> {
@@ -150,45 +134,25 @@ class StickerPipeline @Inject constructor(
                     when (val segResult = foodSubjectSegmenter.segment(bitmap)) {
                         is SegmentationResult.Success -> {
                             onStatus("Compositing die-cut outline and shadow...")
-                            val sticker = try {
-                                stickerCompositor.createDieCutSticker(segResult.foregroundBitmap)
-                            } finally {
-                                segResult.foregroundBitmap.recycle()
-                            }
+                            val sticker = try { stickerCompositor.createDieCutSticker(segResult.foregroundBitmap) } finally { segResult.foregroundBitmap.recycle() }
                             StickerGenerationResult.Success(sticker)
                         }
-                        is SegmentationResult.NoSubjectFound -> {
-                            StickerGenerationResult.FallbackNeeded(
-                                "No distinct food subject detected. Try a circular plate badge or Polaroid tile."
-                            )
-                        }
-                        is SegmentationResult.Failure -> {
-                            StickerGenerationResult.FallbackNeeded(
-                                "Segmentation unavailable: ${segResult.error.localizedMessage ?: "Unknown error"}. Try circular crop."
-                            )
-                        }
+                        is SegmentationResult.NoSubjectFound -> StickerGenerationResult.FallbackNeeded("No distinct food subject detected.")
+                        is SegmentationResult.Failure -> StickerGenerationResult.FallbackNeeded("Segmentation unavailable: ${segResult.error.localizedMessage ?: "Unknown error"}")
                     }
                 }
                 StickerStyle.CIRCULAR_BADGE -> {
                     onStatus("Creating circular plate crop...")
                     val circularSubject = fallbackStickerCropper.createCircularSubject(bitmap)
                     onStatus("Compositing die-cut outline and shadow...")
-                    val sticker = try {
-                        stickerCompositor.createDieCutSticker(circularSubject)
-                    } finally {
-                        circularSubject.recycle()
-                    }
+                    val sticker = try { stickerCompositor.createDieCutSticker(circularSubject) } finally { circularSubject.recycle() }
                     StickerGenerationResult.Success(sticker)
                 }
                 StickerStyle.ROUNDED_TILE -> {
                     onStatus("Creating Polaroid tile crop...")
                     val roundedSubject = fallbackStickerCropper.createRoundedRectSubject(bitmap)
                     onStatus("Compositing die-cut outline and shadow...")
-                    val sticker = try {
-                        stickerCompositor.createDieCutSticker(roundedSubject)
-                    } finally {
-                        roundedSubject.recycle()
-                    }
+                    val sticker = try { stickerCompositor.createDieCutSticker(roundedSubject) } finally { roundedSubject.recycle() }
                     StickerGenerationResult.Success(sticker)
                 }
             }

@@ -307,35 +307,41 @@ fun PlateEntryCard(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    for (i in 1..5) {
-                        Icon(
-                            imageVector = Icons.Rounded.Star,
-                            contentDescription = null,
-                            tint = if (entry.rating >= i) BiteyWarmYellow else theme.inkMuted.copy(alpha = 0.3f),
-                            modifier = Modifier.size(13.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = String.format(Locale.US, "%.1f", entry.rating),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                        color = theme.inkPrimary
-                    )
-
-                    entry.price?.let { price ->
-                        if (price > 0.0) {
-                            Spacer(modifier = Modifier.width(8.dp))
+                if (entry.rating > 0f || (entry.price != null && entry.price > 0.0)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (entry.rating > 0f) {
+                            for (i in 1..5) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Star,
+                                    contentDescription = null,
+                                    tint = if (entry.rating >= i) BiteyWarmYellow else theme.inkMuted.copy(alpha = 0.3f),
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "${entry.currency} ${price.toInt()}",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                color = BiteyMint
+                                text = String.format(Locale.US, "%.1f", entry.rating),
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                                color = theme.inkPrimary
                             )
                         }
-                    }
-                }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                        entry.price?.let { price ->
+                            if (price > 0.0) {
+                                if (entry.rating > 0f) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
+                                Text(
+                                    text = "${entry.currency} ${price.toInt()}",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = BiteyMint
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
 
                 val timeFormat = SimpleDateFormat("h:mm a", Locale.US).format(Date(entry.timestamp))
                 Row(

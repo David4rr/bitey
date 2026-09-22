@@ -43,20 +43,26 @@ class FoodSubjectSegmenter @Inject constructor() {
 
             val inputImage = InputImage.fromBitmap(inputBitmap, 0)
             val result = segmenter.process(inputImage).await()
-            val foreground = result.foregroundBitmap
-            val subjectBitmaps = result.subjects.mapNotNull { it.bitmap }.filter { hasVisibleContent(it) }
+            val rawForeground = result.foregroundBitmap?.let { ensureSoftwareBitmap(it) }
 
-            if (foreground != null && hasVisibleContent(foreground)) {
-                SegmentationResult.Success(foreground, subjectBitmaps)
-            } else if (subjectBitmaps.isNotEmpty()) {
-                SegmentationResult.Success(subjectBitmaps.first(), subjectBitmaps)
+            if (rawForeground != null && hasVisibleContent(rawForeground)) {
+                SegmentationResult.Success(rawForeground)
             } else {
                 SegmentationResult.NoSubjectFound
             }
         } catch (e: Exception) {
+            android.util.Log.e("FoodSubjectSegmenter", "ML Kit segmentation error: ${e.message}", e)
             SegmentationResult.Failure(e)
         } finally {
             scaledBitmap?.recycle()
+        }
+    }
+
+    private fun ensureSoftwareBitmap(bitmap: Bitmap): Bitmap {
+        return if (bitmap.config == Bitmap.Config.HARDWARE) {
+            bitmap.copy(Bitmap.Config.ARGB_8888, false) ?: bitmap
+        } else {
+            bitmap
         }
     }
 
@@ -65,20 +71,23 @@ class FoodSubjectSegmenter @Inject constructor() {
      * is not an empty/invisible bitmap.
      */
     private fun hasVisibleContent(bitmap: Bitmap): Boolean {
-        val width = bitmap.width
-        val height = bitmap.height
+        val safe = ensureSoftwareBitmap(bitmap)
+        val width = safe.width
+        val height = safe.height
         val stepX = (width / 30).coerceAtLeast(1)
         val stepY = (height / 30).coerceAtLeast(1)
 
         for (y in 0 until height step stepY) {
             for (x in 0 until width step stepX) {
-                val pixel = bitmap.getPixel(x, y)
+                val pixel = safe.getPixel(x, y)
                 val alpha = (pixel ushr 24) and 0xFF
                 if (alpha > 35) {
+                    if (safe != bitmap) safe.recycle()
                     return true
                 }
             }
         }
+        if (safe != bitmap) safe.recycle()
         return false
     }
 }

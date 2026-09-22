@@ -4,8 +4,21 @@ import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.location.model.NavigationRoute
 import com.bitey.app.core.location.model.RouteStep
 
+data class FootprintSpot(
+    val id: String,
+    val latitude: Double,
+    val longitude: Double,
+    val locationName: String?,
+    val entries: List<PlateEntryWithTags>
+) {
+    val primaryEntry: PlateEntryWithTags get() = entries.first()
+    val isMultiple: Boolean get() = entries.size > 1
+}
+
 data class FootprintsUiState(
     val entriesWithLocation: List<PlateEntryWithTags> = emptyList(),
+    val spots: List<FootprintSpot> = emptyList(),
+    val selectedSpot: FootprintSpot? = null,
     val selectedEntry: PlateEntryWithTags? = null,
     val searchQuery: String = "",
     val isFavoritesOnly: Boolean = false,

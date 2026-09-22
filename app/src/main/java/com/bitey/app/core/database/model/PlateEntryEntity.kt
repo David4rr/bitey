@@ -21,7 +21,7 @@ data class PlateEntryEntity(
     val stickerImagePath: String? = null,
     val thumbnailPath: String,
     val isStickerMode: Boolean = true,
-    val rating: Float = 5.0f,
+    val rating: Float = 0.0f,
     val price: Double? = null,
     val currency: String = "IDR",
     val isFavorite: Boolean = false,

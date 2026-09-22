@@ -16,7 +16,7 @@ class EntryEditorUiStateTest {
         assertEquals("Food", state.dishTitle)
         assertEquals("", state.notes)
         assertEquals(MealType.FOOD, state.mealType)
-        assertEquals(5.0f, state.rating, 0.01f)
+        assertEquals(0.0f, state.rating, 0.01f)
         assertEquals("", state.priceString)
         assertEquals("IDR", state.currency)
         assertFalse(state.isFavorite)
@@ -30,14 +30,14 @@ class EntryEditorUiStateTest {
     }
 
     @Test
-    fun ratingClamping_within1to5() {
-        val clampedLow = (-2.0f).coerceIn(1.0f, 5.0f)
-        assertEquals(1.0f, clampedLow, 0.01f)
+    fun ratingClamping_within0to5() {
+        val clampedLow = (-2.0f).coerceIn(0.0f, 5.0f)
+        assertEquals(0.0f, clampedLow, 0.01f)
 
-        val clampedHigh = 7.5f.coerceIn(1.0f, 5.0f)
+        val clampedHigh = 7.5f.coerceIn(0.0f, 5.0f)
         assertEquals(5.0f, clampedHigh, 0.01f)
 
-        val validRating = 3.5f.coerceIn(1.0f, 5.0f)
+        val validRating = 3.5f.coerceIn(0.0f, 5.0f)
         assertEquals(3.5f, validRating, 0.01f)
     }
 

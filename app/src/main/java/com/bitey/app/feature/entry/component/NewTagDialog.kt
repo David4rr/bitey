@@ -2,13 +2,11 @@ package com.bitey.app.feature.entry.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -76,12 +74,10 @@ fun TagChip(
 @Composable
 fun NewTagDialog(
     onDismiss: () -> Unit,
-    onConfirm: (name: String, category: String?) -> Unit
+    onConfirm: (name: String) -> Unit
 ) {
     val theme = LocalNeumorphicTheme.current
     var tagName by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("Taste") }
-    val categories = listOf("Taste", "Ambience", "Diet", "Type")
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -110,47 +106,13 @@ fun NewTagDialog(
                     ),
                     singleLine = true
                 )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Text(
-                    text = "Category",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = theme.inkSecondary
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    categories.forEach { category ->
-                        val isCatSelected = selectedCategory == category
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (isCatSelected) BiteyOrange else theme.surfaceVariant)
-                                .clickable { selectedCategory = category }
-                                .padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = category,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (isCatSelected) StickerDieCutWhite else theme.inkSecondary
-                            )
-                        }
-                    }
-                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     if (tagName.isNotBlank()) {
-                        onConfirm(tagName.trim(), selectedCategory)
+                        onConfirm(tagName.trim())
                     }
                 },
                 enabled = tagName.isNotBlank(),

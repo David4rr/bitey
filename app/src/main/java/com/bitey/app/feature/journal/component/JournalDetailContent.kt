@@ -307,7 +307,7 @@ fun JournalDetailContent(
                             tint = if (isFilled) BiteyWarmYellow else theme.inkMuted.copy(alpha = 0.35f),
                             modifier = Modifier
                                 .size(20.dp)
-                                .clickable { rating = i.toFloat() }
+                                .clickable { rating = if (rating == i.toFloat()) 0f else i.toFloat() }
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                     }
@@ -315,7 +315,7 @@ fun JournalDetailContent(
                     Text(
                         text = String.format(Locale.US, "%.1f", rating),
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                        color = theme.inkPrimary
+                        color = if (rating > 0f) theme.inkPrimary else theme.inkMuted
                     )
                 }
 
@@ -740,8 +740,8 @@ fun JournalDetailContent(
     if (isNewTagDialogOpen) {
         NewTagDialog(
             onDismiss = { isNewTagDialogOpen = false },
-            onConfirm = { name, category ->
-                val newTag = TagEntity(tagName = name, category = category)
+            onConfirm = { name ->
+                val newTag = TagEntity(tagName = name)
                 if (currentAvailableTags.none { it.tagName.equals(name, ignoreCase = true) }) {
                     currentAvailableTags = currentAvailableTags + newTag
                 }

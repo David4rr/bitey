@@ -16,6 +16,10 @@ import com.bitey.app.feature.footprints.FootprintsScreen
 import com.bitey.app.feature.journal.JournalScreen
 import com.bitey.app.feature.scrapbook.ScrapbookScreen
 import com.bitey.app.feature.profile.ProfileScreen
+import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+
 @Composable
 fun BiteyNavHost(
     navController: NavHostController,
@@ -26,6 +30,22 @@ fun BiteyNavHost(
     NavHost(
         navController = navController,
         startDestination = Screen.Journal.route,
+        enterTransition = {
+            slideInHorizontally(initialOffsetX = { (it * 0.25f).toInt() }, animationSpec = tween(320, easing = FastOutSlowInEasing)) +
+                fadeIn(animationSpec = tween(280))
+        },
+        exitTransition = {
+            slideOutHorizontally(targetOffsetX = { -(it * 0.25f).toInt() }, animationSpec = tween(320, easing = FastOutSlowInEasing)) +
+                fadeOut(animationSpec = tween(280))
+        },
+        popEnterTransition = {
+            slideInHorizontally(initialOffsetX = { -(it * 0.25f).toInt() }, animationSpec = tween(320, easing = FastOutSlowInEasing)) +
+                fadeIn(animationSpec = tween(280))
+        },
+        popExitTransition = {
+            slideOutHorizontally(targetOffsetX = { (it * 0.25f).toInt() }, animationSpec = tween(320, easing = FastOutSlowInEasing)) +
+                fadeOut(animationSpec = tween(280))
+        },
         modifier = modifier.padding(paddingValues)
     ) {
         composable(Screen.Journal.route) {

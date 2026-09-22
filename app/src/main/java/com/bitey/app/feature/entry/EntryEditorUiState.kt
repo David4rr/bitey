@@ -11,7 +11,7 @@ data class EntryEditorUiState(
     val dishTitle: String = "Food",
     val notes: String = "",
     val mealType: MealType = MealType.FOOD,
-    val rating: Float = 5.0f,
+    val rating: Float = 0.0f,
     val priceString: String = "",
     val currency: String = "IDR",
     val isFavorite: Boolean = false,
@@ -43,7 +43,7 @@ data class EntryEditorUiState(
             timestamp = timestamp,
             latitude = latitude,
             longitude = longitude,
-            locationName = locationName.trim().takeIf { it.isNotBlank() } ?: geocodedAddress,
+            locationName = locationName.trim().takeIf { it.isNotBlank() },
             mealType = mealType,
             plateSessionId = plateSessionId
         )

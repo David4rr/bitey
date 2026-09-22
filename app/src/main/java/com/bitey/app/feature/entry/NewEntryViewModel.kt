@@ -110,20 +110,29 @@ class NewEntryViewModel @Inject constructor(
             files.forEachIndexed { index, file ->
                 _uiState.update { it.copy(processingSourceFile = file.absolutePath, processingStickerFile = null, segmentationStatusText = "Cutting dish ${index + 1}/${files.size}...") }
                 val sticker = stickerPipeline.createStickerWithFallback(file)
-                if (sticker != null) {
-                    list.add(
-                        CandidateStickerItem(
-                            originalFilePath = file.absolutePath,
-                            stickerFilePath = sticker.file.absolutePath,
-                            label = if (files.size == 1) "Food" else "Food ${index + 1}",
-                            mealType = MealType.FOOD
-                        )
+                val stickerPath = sticker?.file?.absolutePath ?: file.absolutePath
+                list.add(
+                    CandidateStickerItem(
+                        originalFilePath = file.absolutePath,
+                        stickerFilePath = stickerPath,
+                        label = if (files.size == 1) "Food" else "Food ${index + 1}",
+                        mealType = MealType.FOOD
                     )
+                )
+                if (sticker != null) {
                     _uiState.update { it.copy(processingStickerFile = sticker.file.absolutePath) }
-                    kotlinx.coroutines.delay(850)
                 }
+                kotlinx.coroutines.delay(400)
             }
-            _uiState.update { it.copy(step = CaptureFlowStep.REVIEW, candidates = list) }
+            _uiState.update {
+                it.copy(
+                    step = CaptureFlowStep.REVIEW,
+                    candidates = list,
+                    dishName = list.firstOrNull()?.label ?: "Food",
+                    processingStickerFile = list.firstOrNull()?.stickerFilePath,
+                    isStickerMode = true
+                )
+            }
         }
     }
     fun onImagePicked(uri: Uri) {
@@ -134,8 +143,7 @@ class NewEntryViewModel @Inject constructor(
                     val exifLat = processed.exifMetadata.latitude
                     val exifLng = processed.exifMetadata.longitude
                     if (exifLat != null && exifLng != null) {
-                        val locName = geocoderRepository.reverseGeocode(exifLat, exifLng)?.displayName
-                        _uiState.update { it.copy(latitude = exifLat, longitude = exifLng, locationName = locName) }
+                        _uiState.update { it.copy(latitude = exifLat, longitude = exifLng) }
                     }
                     processSingleFile(processed.file)
                 },
@@ -150,35 +158,33 @@ class NewEntryViewModel @Inject constructor(
             if (_uiState.value.latitude == null || _uiState.value.longitude == null) {
                 fetchLocation()
             }
-            val stickers = stickerPipeline.createStickersForMultiSubject(file)
-            val list = if (stickers.isNotEmpty()) {
-                stickers.mapIndexed { idx, s ->
-                    CandidateStickerItem(
-                        originalFilePath = file.absolutePath,
-                        stickerFilePath = s.file.absolutePath,
-                        label = if (stickers.size == 1) "Food" else "Food ${idx + 1}",
-                        mealType = MealType.FOOD
-                    )
-                }
-            } else listOf(
+            val sticker = stickerPipeline.createStickerWithFallback(file)
+            val stickerPath = sticker?.file?.absolutePath ?: file.absolutePath
+            val list = listOf(
                 CandidateStickerItem(
                     originalFilePath = file.absolutePath,
-                    stickerFilePath = file.absolutePath,
+                    stickerFilePath = stickerPath,
                     label = "Food",
                     mealType = MealType.FOOD
                 )
             )
-            _uiState.update { it.copy(processingStickerFile = list.firstOrNull()?.stickerFilePath, segmentationStatusText = "Voila! Sticker ready ✨") }
-            kotlinx.coroutines.delay(950)
-            _uiState.update { it.copy(step = CaptureFlowStep.REVIEW, candidates = list) }
+            val hasSticker = list.any { it.stickerFilePath != file.absolutePath }
+            _uiState.update {
+                it.copy(
+                    step = CaptureFlowStep.REVIEW,
+                    candidates = list,
+                    dishName = list.firstOrNull()?.label ?: "Food",
+                    processingStickerFile = list.firstOrNull()?.stickerFilePath,
+                    isStickerMode = hasSticker
+                )
+            }
         }
     }
 
     private suspend fun fetchLocation() {
         if (_uiState.value.latitude != null && _uiState.value.longitude != null) return
         val coords = locationProvider.getCurrentLocation() ?: return
-        val locName = geocoderRepository.reverseGeocode(coords.latitude, coords.longitude)?.displayName
-        _uiState.update { it.copy(latitude = coords.latitude, longitude = coords.longitude, locationName = locName) }
+        _uiState.update { it.copy(latitude = coords.latitude, longitude = coords.longitude) }
     }
 
     fun applyManualCut(style: StickerStyle) {
@@ -207,13 +213,12 @@ class NewEntryViewModel @Inject constructor(
             val currentTime = System.currentTimeMillis()
             var lat = state.latitude
             var lng = state.longitude
-            var locName = state.locationName
+            val locName = state.locationName?.trim()?.takeIf { it.isNotBlank() }
             if (lat == null || lng == null) {
                 val coords = locationProvider.getCurrentLocation(timeoutMillis = 2000L)
                 if (coords != null) {
                     lat = coords.latitude
                     lng = coords.longitude
-                    locName = geocoderRepository.reverseGeocode(coords.latitude, coords.longitude)?.displayName
                 }
             }
 
@@ -232,7 +237,7 @@ class NewEntryViewModel @Inject constructor(
                         stickerImagePath = if (isSticker) savedFile.absolutePath else null,
                         thumbnailPath = savedFile.absolutePath,
                         isStickerMode = isSticker,
-                        rating = 5.0f,
+                        rating = 0.0f,
                         price = null,
                         currency = "IDR",
                         isFavorite = false,
