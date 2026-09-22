@@ -1,5 +1,6 @@
 package com.bitey.app.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -8,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -25,47 +27,55 @@ fun BiteyApp() {
     val theme = LocalNeumorphicTheme.current
 
     var showCameraSheet by remember { mutableStateOf(false) }
+    var cameraAnchorOffset by remember { mutableStateOf<Offset?>(null) }
 
-    // Show bottom bar on primary browsing tabs; hide during full-screen capture flow
+    // Show bottom bar on primary browsing tabs; kept mounted under overlay for seamless circular collapse
     val shouldShowBottomBar = currentRoute in listOf(
         Screen.Journal.route,
         Screen.Profile.route
-    ) && !showCameraSheet
+    )
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = theme.background,
-        bottomBar = {
-            if (shouldShowBottomBar) {
-                BiteyBottomNavigationBar(
-                    currentRoute = currentRoute,
-                    onNavigateToRoute = { route ->
-                        navController.navigate(route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = theme.background,
+            bottomBar = {
+                if (shouldShowBottomBar) {
+                    BiteyBottomNavigationBar(
+                        currentRoute = currentRoute,
+                        onNavigateToRoute = { route ->
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
+                        },
+                        onOpenLiveCamera = { anchor ->
+                            cameraAnchorOffset = anchor
+                            showCameraSheet = true
                         }
-                    },
-                    onOpenLiveCamera = {
-                        showCameraSheet = true
-                    }
-                )
+                    )
+                }
             }
+        ) { innerPadding ->
+            BiteyNavHost(
+                navController = navController,
+                paddingValues = innerPadding,
+                onOpenLiveCamera = {
+                    cameraAnchorOffset = null
+                    showCameraSheet = true
+                }
+            )
         }
-    ) { innerPadding ->
-        BiteyNavHost(
-            navController = navController,
-            paddingValues = innerPadding,
-            onOpenLiveCamera = { showCameraSheet = true }
-        )
-    }
 
-    // Live Camera Preview Bottom Sheet Dialog
-    if (showCameraSheet) {
-        CameraCaptureBottomSheet(
-            onDismissRequest = { showCameraSheet = false }
-        )
+        // Live Camera Preview with Circular Reveal Animation
+        if (showCameraSheet) {
+            CameraCaptureBottomSheet(
+                anchorOffset = cameraAnchorOffset,
+                onDismissRequest = { showCameraSheet = false }
+            )
+        }
     }
 }

@@ -24,21 +24,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,7 +54,7 @@ import com.bitey.app.core.ui.theme.StickerDieCutWhite
 fun BiteyBottomNavigationBar(
     currentRoute: String?,
     onNavigateToRoute: (String) -> Unit,
-    onOpenLiveCamera: () -> Unit
+    onOpenLiveCamera: (Offset?) -> Unit = {}
 ) {
     val theme = LocalNeumorphicTheme.current
 
@@ -72,11 +75,7 @@ fun BiteyBottomNavigationBar(
                 shape = CircleShape,
                 color = theme.surface,
                 border = BorderStroke(1.dp, theme.border),
-                shadowElevation = 0.dp,
-                tonalElevation = 0.dp,
-                modifier = Modifier
-                    .width(152.dp)
-                    .height(48.dp)
+                modifier = Modifier.size(width = 152.dp, height = 48.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -115,17 +114,17 @@ fun BiteyBottomNavigationBar(
                                 .padding(vertical = 2.dp)
                         ) {
                             val iconScale by animateFloatAsState(
-                            targetValue = if (selected) 1.15f else 1.0f,
-                            animationSpec = spring(dampingRatio = 0.5f, stiffness = 200f),
-                            label = "iconScale"
-                        )
-                        val iconRotation by animateFloatAsState(
-                            targetValue = if (selected && screen == Screen.Journal) -8f else 0f,
-                            animationSpec = spring(dampingRatio = 0.5f, stiffness = 200f),
-                            label = "iconRotation"
-                        )
-                        
-                        if (screen.iconResId != null) {
+                                targetValue = if (selected) 1.15f else 1.0f,
+                                animationSpec = spring(0.5f, 200f),
+                                label = "iconScale"
+                            )
+                            val iconRotation by animateFloatAsState(
+                                targetValue = if (selected && screen == Screen.Journal) -8f else 0f,
+                                animationSpec = spring(0.5f, 200f),
+                                label = "iconRotation"
+                            )
+
+                            if (screen.iconResId != null) {
                                 Icon(
                                     painter = androidx.compose.ui.res.painterResource(id = screen.iconResId),
                                     contentDescription = screen.title,
@@ -153,14 +152,12 @@ fun BiteyBottomNavigationBar(
             }
 
             // Separate Camera Capture Button (outside the pill)
+            var cameraButtonCenter by remember { mutableStateOf<Offset?>(null) }
             val interactionSource = remember { MutableInteractionSource() }
             val isPressed by interactionSource.collectIsPressedAsState()
             val scale by animateFloatAsState(
                 targetValue = if (isPressed) 0.95f else 1.0f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMedium
-                ),
+                animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium),
                 label = "cameraScale"
             )
 
@@ -171,11 +168,14 @@ fun BiteyBottomNavigationBar(
                     .clip(CircleShape)
                     .background(BiteyOrange)
                     .border(1.dp, theme.border, CircleShape)
+                    .onGloballyPositioned { coordinates ->
+                        cameraButtonCenter = coordinates.boundsInRoot().center
+                    }
                     .clickable(
                         interactionSource = interactionSource,
                         indication = null
                     ) {
-                        onOpenLiveCamera()
+                        onOpenLiveCamera(cameraButtonCenter)
                     },
                 contentAlignment = Alignment.Center
             ) {
