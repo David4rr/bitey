@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.ui.LocalAnimatedVisibilityScope
 import com.bitey.app.core.ui.LocalSharedTransitionScope
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
@@ -33,12 +34,20 @@ fun JournalScreen(
     val theme = LocalNeumorphicTheme.current
     var isSearchActive by remember { mutableStateOf(false) }
 
+    var activeDetailDish by remember { mutableStateOf<PlateEntryWithTags?>(null) }
+    var activeDetailPlate by remember { mutableStateOf<JournalPlate?>(null) }
+
     var previewFile by remember { mutableStateOf<File?>(null) }
     var previewTitle by remember { mutableStateOf("") }
     var previewIsSticker by remember { mutableStateOf(true) }
+    var previewDishKey by remember { mutableStateOf("") }
+    var stickerSourceBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
 
-    LaunchedEffect(uiState.selectedEntryForDetail) {
-        if (uiState.selectedEntryForDetail == null) {
+    LaunchedEffect(uiState.selectedEntryForDetail, uiState.selectedPlateForDetail) {
+        if (uiState.selectedEntryForDetail != null) {
+            activeDetailDish = uiState.selectedEntryForDetail
+            activeDetailPlate = uiState.selectedPlateForDetail
+        } else {
             previewFile = null
         }
         onJournalDetailVisibilityChange(uiState.selectedEntryForDetail != null)
@@ -61,7 +70,8 @@ fun JournalScreen(
                             onSelectTag = { viewModel.selectTag(it?.tagId) },
                             onToggleFavoritesOnly = { viewModel.toggleFavoritesOnly() },
                             onToggleGridView = { viewModel.setGridView(!uiState.isGridView) },
-                            onDishClick = { plate, dish, _ ->
+                            onDishClick = { plate, dish, bounds ->
+                                stickerSourceBounds = bounds
                                 viewModel.selectPlateForDetail(plate, dish)
                             },
                             onToggleFavorite = { viewModel.toggleFavorite(it) },
@@ -77,11 +87,12 @@ fun JournalScreen(
                     visible = uiState.selectedEntryForDetail != null,
                     onDismissRequest = { viewModel.selectPlateForDetail(null) }
                 ) {
-                    uiState.selectedEntryForDetail?.let { selectedDish ->
+                    activeDetailDish?.let { selectedDish ->
                         JournalDetailSheet(
                             item = selectedDish,
-                            plate = uiState.selectedPlateForDetail,
+                            plate = activeDetailPlate,
                             availableTags = uiState.availableTags,
+                            initialStickerBounds = stickerSourceBounds,
                             onClose = { viewModel.selectPlateForDetail(null) },
                             onToggleFavorite = { viewModel.toggleFavorite(selectedDish.entry) },
                             onDelete = {
@@ -91,25 +102,24 @@ fun JournalScreen(
                             onSaveEntry = { updated, tags ->
                                 viewModel.updateEntry(updated, tags)
                             },
-                            onPreviewSticker = { file, title, isSticker ->
+                            onPreviewSticker = { file, title, isSticker, key ->
                                 previewFile = file
                                 previewTitle = title
                                 previewIsSticker = isSticker
+                                previewDishKey = key
                             }
                         )
                     }
                 }
 
-                uiState.selectedEntryForDetail?.let { selectedDish ->
-                    StickerPreviewOverlay(
-                        visible = previewFile != null,
-                        imageFile = previewFile,
-                        title = previewTitle,
-                        dishKey = "dish_sticker_${selectedDish.entry.id}",
-                        isSticker = previewIsSticker,
-                        onDismiss = { previewFile = null }
-                    )
-                }
+                StickerPreviewOverlay(
+                    visible = previewFile != null,
+                    imageFile = previewFile,
+                    title = previewTitle,
+                    dishKey = previewDishKey,
+                    isSticker = previewIsSticker,
+                    onDismiss = { previewFile = null }
+                )
             }
         }
     }

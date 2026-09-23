@@ -30,18 +30,21 @@ fun BiteyApp() {
     var cameraAnchorOffset by remember { mutableStateOf<Offset?>(null) }
     var isJournalDetailOpen by remember { mutableStateOf(false) }
 
-    // Show bottom bar on primary browsing tabs; hide when dish detail is open
     val shouldShowBottomBar = currentRoute in listOf(
         Screen.Journal.route,
         Screen.Profile.route
-    ) && !isJournalDetailOpen
+    )
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = theme.background,
             bottomBar = {
-                if (shouldShowBottomBar) {
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = shouldShowBottomBar,
+                    enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180)),
+                    exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(150))
+                ) {
                     BiteyBottomNavigationBar(
                         currentRoute = currentRoute,
                         onNavigateToRoute = { route ->

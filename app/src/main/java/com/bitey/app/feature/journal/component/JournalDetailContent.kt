@@ -2,6 +2,7 @@ package com.bitey.app.feature.journal.component
 
 import android.app.DatePickerDialog
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -62,7 +63,7 @@ fun JournalDetailContent(
     onToggleFavorite: (() -> Unit)? = null,
     onActiveDishChange: ((PlateEntryWithTags) -> Unit)? = null,
     onClose: (() -> Unit)? = null,
-    onPreviewSticker: ((File, String, Boolean) -> Unit)? = null
+    onPreviewSticker: ((File, String, Boolean, String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val theme = LocalNeumorphicTheme.current
@@ -502,29 +503,52 @@ fun JournalDetailContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                val enterTransition = remember(initialStickerBounds, restingStickerBounds) {
-                    SharedDishTransition.create(initialStickerBounds, restingStickerBounds)
+                var targetStickerBounds by remember(activeDish.entry.id) { mutableStateOf<Rect?>(null) }
+                val hasSource = initialStickerBounds != null
+                val stickerProgress = remember(activeDish.entry.id, hasSource) {
+                    Animatable(if (hasSource) 0f else 1f)
                 }
-                val stickerProgress = rememberSharedDishTransitionProgress(
-                    key = activeDish.entry.id,
-                    hasSource = initialStickerBounds != null,
-                    isTargetReady = restingStickerBounds != null
-                )
+                // Derive transition only when BOTH bounds are known
+                val transition = if (initialStickerBounds != null && targetStickerBounds != null) {
+                    remember(initialStickerBounds, targetStickerBounds) {
+                        SharedDishTransition.create(initialStickerBounds, targetStickerBounds)
+                    }
+                } else null
+
+                // Fire animation only after target layout is measured
+                LaunchedEffect(activeDish.entry.id, hasSource, targetStickerBounds) {
+                    if (hasSource && targetStickerBounds != null) {
+                        stickerProgress.snapTo(0f)
+                        stickerProgress.animateTo(
+                            targetValue = 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMedium
+                            )
+                        )
+                    }
+                }
+
+                val previewKey = "preview_sticker_${activeDish.entry.id}"
 
                 if (carouselStickers.size <= 1) {
                     Box(
                         modifier = Modifier
                             .size(165.dp)
-                            .dishSharedElement("dish_sticker_${activeDish.entry.id}")
                             .onGloballyPositioned { coords ->
-                                restingStickerBounds = coords.boundsInWindow()
+                                if (targetStickerBounds == null) {
+                                    targetStickerBounds = coords.boundsInWindow()
+                                }
                             }
-                            .sharedDishTransform(
-                                transition = enterTransition,
-                                progress = stickerProgress.value,
-                                fallbackScale = 0.65f + 0.35f * stickerProgress.value,
-                                fallbackAlpha = stickerProgress.value
-                            )
+                            .graphicsLayer {
+                                if (transition != null && stickerProgress.value < 1f) {
+                                    translationX = transition.calculateTranslationX(stickerProgress.value)
+                                    translationY = transition.calculateTranslationY(stickerProgress.value)
+                                    val s = transition.calculateScale(stickerProgress.value)
+                                    scaleX = s
+                                    scaleY = s
+                                }
+                            }
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
@@ -533,7 +557,8 @@ fun JournalDetailContent(
                                         val displayFile = File(
                                             if (isStickerMode && entry.stickerImagePath != null) currentStickerPath else entry.fullImagePath
                                         )
-                                        onPreviewSticker(displayFile, title, isStickerMode && entry.stickerImagePath != null)
+                                        val isSticker = isStickerMode && entry.stickerImagePath != null
+                                        onPreviewSticker(displayFile, title, isSticker, previewKey)
                                     } else {
                                         showPreview = true
                                     }
@@ -558,10 +583,12 @@ fun JournalDetailContent(
                         AsyncImage(
                             model = imageRequest,
                             contentDescription = title,
-                            modifier = Modifier.fillMaxSize().then(
-                                if (isStickerMode && entry.stickerImagePath != null) Modifier.dieCutStickerEffect()
-                                else Modifier.clip(RoundedCornerShape(18.dp))
-                            ),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(
+                                    if (isStickerMode && entry.stickerImagePath != null) Modifier.dieCutStickerEffect()
+                                    else Modifier.clip(RoundedCornerShape(18.dp))
+                                ),
                             contentScale = if (isStickerMode && entry.stickerImagePath != null) ContentScale.Fit else ContentScale.Crop
                         )
                     }
@@ -570,11 +597,15 @@ fun JournalDetailContent(
                         stickers = carouselStickers,
                         initialIndex = selectedStickerIndex,
                         isStickerMode = isStickerMode,
+                        stickerDishKeys = plateDishes.map { "preview_sticker_${it.entry.id}" },
                         onStickerClick = {
                             selectedStickerIndex = it
+                            val clickedDish = plateDishes.getOrNull(it) ?: activeDish
+                            val path = if (it in carouselStickers.indices) carouselStickers[it] else currentStickerPath
+                            val isSticker = isStickerMode && clickedDish.entry.stickerImagePath != null
+                            val key = "preview_sticker_${clickedDish.entry.id}"
                             if (onPreviewSticker != null) {
-                                val path = if (it in carouselStickers.indices) carouselStickers[it] else currentStickerPath
-                                onPreviewSticker(File(path), title, isStickerMode)
+                                onPreviewSticker(File(path), title, isSticker, key)
                             } else {
                                 showPreview = true
                             }
@@ -583,16 +614,19 @@ fun JournalDetailContent(
                         modifier = Modifier
                             .size(165.dp)
                             .onGloballyPositioned { coords ->
-                                if (restingStickerBounds == null) {
-                                    restingStickerBounds = coords.boundsInWindow()
+                                if (targetStickerBounds == null) {
+                                    targetStickerBounds = coords.boundsInWindow()
                                 }
                             }
-                            .sharedDishTransform(
-                                transition = enterTransition,
-                                progress = stickerProgress.value,
-                                fallbackScale = 0.65f + 0.35f * stickerProgress.value,
-                                fallbackAlpha = stickerProgress.value
-                            )
+                            .graphicsLayer {
+                                if (transition != null && stickerProgress.value < 1f) {
+                                    translationX = transition.calculateTranslationX(stickerProgress.value)
+                                    translationY = transition.calculateTranslationY(stickerProgress.value)
+                                    val s = transition.calculateScale(stickerProgress.value)
+                                    scaleX = s
+                                    scaleY = s
+                                }
+                            }
                     )
                 }
             }

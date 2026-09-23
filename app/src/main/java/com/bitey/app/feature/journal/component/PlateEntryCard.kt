@@ -259,7 +259,6 @@ fun PlateEntryCard(
             Box(
                 modifier = Modifier
                     .size(86.dp)
-                    .dishSharedElement("dish_sticker_${entry.id}")
                     .onGloballyPositioned { coords ->
                         stickerBounds = coords.boundsInWindow()
                     },

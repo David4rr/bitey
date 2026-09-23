@@ -144,7 +144,6 @@ private fun ModularStickerItem(
     Box(
         modifier = Modifier
             .size(stickerSizeDp)
-            .dishSharedElement(dishKey ?: "")
             .graphicsLayer {
                 translationX = physicsX; translationY = physicsY
                 rotationZ = rotation; scaleX = dragScale; scaleY = dragScale

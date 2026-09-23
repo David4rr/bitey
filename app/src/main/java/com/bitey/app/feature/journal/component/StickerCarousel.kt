@@ -19,6 +19,7 @@ import androidx.compose.ui.util.lerp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.bitey.app.core.image.CropTransparentTransformation
+import com.bitey.app.core.ui.dishSharedElement
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
 import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
@@ -31,6 +32,7 @@ fun StickerCarousel(
     stickers: List<String>,
     initialIndex: Int = 0,
     isStickerMode: Boolean = true,
+    stickerDishKeys: List<String> = emptyList(),
     onStickerClick: (index: Int) -> Unit = {},
     onActiveIndexChange: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -100,11 +102,18 @@ fun StickerCarousel(
                     ),
                 contentAlignment = Alignment.Center
             ) {
+                val pageDishKey = stickerDishKeys.getOrNull(page)
+                val isCurrent = pagerState.currentPage == page
                 AsyncImage(
                     model = imageRequest,
                     contentDescription = "Sticker #${page + 1}",
                     modifier = Modifier
                         .fillMaxSize()
+                        .then(
+                            if (isCurrent && !pageDishKey.isNullOrBlank()) {
+                                Modifier.dishSharedElement(pageDishKey)
+                            } else Modifier
+                        )
                         .then(
                             if (isStickerMode) Modifier.dieCutStickerEffect()
                             else Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))

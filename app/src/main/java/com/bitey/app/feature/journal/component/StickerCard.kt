@@ -65,7 +65,6 @@ fun StickerCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .dishSharedElement("dish_sticker_${entry.id}")
                     .onGloballyPositioned { coords ->
                         stickerBounds = coords.boundsInWindow()
                     },

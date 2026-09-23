@@ -56,19 +56,19 @@ class DishDetailAnimationTest {
         val detailFile = resolveFile("src/main/java/com/bitey/app/feature/journal/component/JournalDetailContent.kt")
         assertTrue(detailFile.exists())
         val text = detailFile.readText()
-        assertTrue("Applies dishSharedElement to hero sticker", text.contains("dishSharedElement("))
-        assertTrue("Uses SharedDishTransition", text.contains("SharedDishTransition.create"))
-        assertTrue("Tracks progress with spring physics", text.contains("rememberSharedDishTransitionProgress"))
-        assertTrue("Applies sharedDishTransform", text.contains("sharedDishTransform"))
+        assertTrue("Uses SharedDishTransition math for card-to-sheet animation", text.contains("SharedDishTransition.create("))
+        assertTrue("Passes stickerDishKeys to StickerCarousel", text.contains("stickerDishKeys ="))
+        assertTrue("Uses spring animation for sticker progress", text.contains("stickerProgress"))
     }
 
     @Test
-    fun stickerPreviewOverlay_usesSharedTransitionElements() {
+    fun stickerPreviewOverlay_usesSpringAnimation() {
         val previewFile = resolveFile("src/main/java/com/bitey/app/feature/journal/component/StickerPreviewOverlay.kt")
         assertTrue(previewFile.exists())
         val text = previewFile.readText()
-        assertTrue("Applies dishSharedElement to preview image", text.contains("dishSharedElement(dishKey)"))
+        assertTrue("Uses spring scale pop-in for preview", text.contains("DampingRatioLowBouncy"))
         assertTrue("Accepts onDismiss callback", text.contains("onDismiss: () -> Unit"))
+        assertTrue("Does not use broken shared element across stable scopes", !text.contains("dishSharedElement("))
     }
 
     @Test
