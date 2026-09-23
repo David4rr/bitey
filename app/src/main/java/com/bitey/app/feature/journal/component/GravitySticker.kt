@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.*
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.bitey.app.core.image.CropTransparentTransformation
-import com.bitey.app.core.ui.dishSharedElement
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
 import java.io.File
 import kotlin.math.*
@@ -33,8 +32,7 @@ fun GravitySticker(
     isGravityEnabled: Boolean,
     contentDescription: String?,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    dishKey: String? = null
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -81,8 +79,7 @@ fun GravitySticker(
                 file = file, index = index, totalCount = count, initialOffset = initialOffset,
                 stickerSizeDp = stickerSizeDp, containerSize = containerSize,
                 tiltX = tiltX, tiltY = tiltY, isGravityEnabled = isGravityEnabled,
-                isStickerMode = isStickerMode, contentDescription = contentDescription, onClick = onClick,
-                dishKey = if (index == 0) dishKey else null
+                isStickerMode = isStickerMode, contentDescription = contentDescription, onClick = onClick
             )
         }
     }
@@ -101,8 +98,7 @@ private fun ModularStickerItem(
     isGravityEnabled: Boolean,
     isStickerMode: Boolean,
     contentDescription: String?,
-    onClick: () -> Unit,
-    dishKey: String? = null
+    onClick: () -> Unit
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -144,7 +140,6 @@ private fun ModularStickerItem(
     Box(
         modifier = Modifier
             .size(stickerSizeDp)
-            .dishSharedElement(dishKey ?: "")
             .graphicsLayer {
                 translationX = physicsX; translationY = physicsY
                 rotationZ = rotation; scaleX = dragScale; scaleY = dragScale
@@ -181,6 +176,5 @@ fun GravitySticker(
     isGravityEnabled: Boolean,
     contentDescription: String?,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    dishKey: String? = null
-) = GravitySticker(listOf(imageFile), isStickerMode, isGravityEnabled, contentDescription, onClick, modifier, dishKey)
+    modifier: Modifier = Modifier
+) = GravitySticker(listOf(imageFile), isStickerMode, isGravityEnabled, contentDescription, onClick, modifier)

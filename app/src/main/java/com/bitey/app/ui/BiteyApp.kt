@@ -28,13 +28,12 @@ fun BiteyApp() {
 
     var showCameraSheet by remember { mutableStateOf(false) }
     var cameraAnchorOffset by remember { mutableStateOf<Offset?>(null) }
-    var isJournalDetailOpen by remember { mutableStateOf(false) }
 
-    // Show bottom bar on primary browsing tabs; hide when dish detail is open
+    // Show bottom bar on primary browsing tabs; kept mounted under overlay for seamless circular collapse
     val shouldShowBottomBar = currentRoute in listOf(
         Screen.Journal.route,
         Screen.Profile.route
-    ) && !isJournalDetailOpen
+    )
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -67,8 +66,7 @@ fun BiteyApp() {
                 onOpenLiveCamera = {
                     cameraAnchorOffset = null
                     showCameraSheet = true
-                },
-                onJournalDetailVisibilityChange = { isJournalDetailOpen = it }
+                }
             )
         }
 

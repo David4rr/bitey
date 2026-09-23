@@ -25,7 +25,6 @@ fun BiteyNavHost(
     navController: NavHostController,
     paddingValues: PaddingValues,
     onOpenLiveCamera: () -> Unit = {},
-    onJournalDetailVisibilityChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -54,8 +53,7 @@ fun BiteyNavHost(
                 onNavigateToNewEntry = onOpenLiveCamera,
                 onNavigateToFootprints = { navController.navigate(Screen.Footprints.createRoute()) },
                 onNavigateToFateTable = { navController.navigate(Screen.FateTable.route) },
-                onNavigateToScrapbook = { navController.navigate(Screen.Scrapbook.route) },
-                onJournalDetailVisibilityChange = onJournalDetailVisibilityChange
+                onNavigateToScrapbook = { navController.navigate(Screen.Scrapbook.route) }
             )
         }
 

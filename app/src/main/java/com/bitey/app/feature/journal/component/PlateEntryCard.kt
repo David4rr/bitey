@@ -11,18 +11,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,13 +36,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-import com.bitey.app.core.ui.dishSharedElement
 import com.bitey.app.feature.journal.JournalPlate
 
 @Composable
 fun JournalPlateCard(
     plate: JournalPlate,
-    onClick: (Rect?) -> Unit,
+    onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -64,13 +57,12 @@ fun JournalPlateCard(
 
     val theme = LocalNeumorphicTheme.current
     val context = LocalContext.current
-    var stickerBounds by remember { mutableStateOf<Rect?>(null) }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick(stickerBounds) }
+            .clickable(onClick = onClick)
             .padding(horizontal = 6.dp, vertical = 8.dp)
     ) {
         Row(
@@ -79,11 +71,7 @@ fun JournalPlateCard(
         ) {
             // Composite Plate Thumbnail Box with overlapping mini stickers
             Box(
-                modifier = Modifier
-                    .size(86.dp)
-                    .onGloballyPositioned { coords ->
-                        stickerBounds = coords.boundsInWindow()
-                    },
+                modifier = Modifier.size(86.dp),
                 contentAlignment = Alignment.Center
             ) {
                 val displayEntries = plate.entries.take(4)
@@ -228,14 +216,13 @@ fun JournalPlateCard(
 @Composable
 fun PlateEntryCard(
     item: PlateEntryWithTags,
-    onClick: (Rect?) -> Unit,
+    onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val entry = item.entry
     val theme = LocalNeumorphicTheme.current
     val context = LocalContext.current
-    var stickerBounds by remember { mutableStateOf<Rect?>(null) }
     val imageRequest = remember(entry, context) {
         val path = if (entry.isStickerMode && entry.stickerImagePath != null) entry.stickerImagePath else entry.fullImagePath
         ImageRequest.Builder(context)
@@ -249,7 +236,7 @@ fun PlateEntryCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick(stickerBounds) }
+            .clickable(onClick = onClick)
             .padding(horizontal = 6.dp, vertical = 8.dp)
     ) {
         Row(
@@ -257,12 +244,7 @@ fun PlateEntryCard(
             modifier = Modifier.fillMaxWidth()
         ) {
             Box(
-                modifier = Modifier
-                    .size(86.dp)
-                    .dishSharedElement("dish_sticker_${entry.id}")
-                    .onGloballyPositioned { coords ->
-                        stickerBounds = coords.boundsInWindow()
-                    },
+                modifier = Modifier.size(86.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (entry.isStickerMode && entry.stickerImagePath != null) {
