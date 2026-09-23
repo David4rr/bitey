@@ -4,13 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowDownward
-import androidx.compose.material.icons.rounded.ArrowUpward
-import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,11 +13,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
 import com.bitey.app.core.ui.theme.BiteyOrange
+import com.bitey.app.core.ui.theme.CherryBombOneFontFamily
 import com.bitey.app.core.ui.theme.StickerDieCutWhite
+import com.bitey.app.feature.scrapbook.ScrapbookThemeUtils
 import com.bitey.app.feature.scrapbook.model.CanvasElement
 import com.bitey.app.feature.scrapbook.model.CanvasElementType
 import java.io.File
@@ -36,6 +33,7 @@ import java.io.File
 @Composable
 fun CanvasElementItem(
     element: CanvasElement,
+    backgroundColorHex: Long = 0xFFF4F1EA,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier) {
@@ -43,16 +41,32 @@ fun CanvasElementItem(
             CanvasElementType.FOOD_STICKER -> {
                 val file = element.imagePath?.let { File(it) }
                 if (file != null && file.exists()) {
-                    Box(
-                        modifier = Modifier.size(150.dp).padding(6.dp),
-                        contentAlignment = Alignment.Center
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(4.dp)
                     ) {
-                        AsyncImage(
-                            model = file,
-                            contentDescription = element.text,
-                            modifier = Modifier.fillMaxSize().dieCutStickerEffect(),
-                            contentScale = ContentScale.Fit
-                        )
+                        Box(
+                            modifier = Modifier.size(140.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = file,
+                                contentDescription = element.text,
+                                modifier = Modifier.fillMaxSize().dieCutStickerEffect(),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                        element.text?.takeIf { it.isNotBlank() }?.let { title ->
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = title,
+                                fontFamily = CherryBombOneFontFamily,
+                                fontSize = 13.sp,
+                                color = ScrapbookThemeUtils.getCanvasPrimaryTextColor(backgroundColorHex),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
@@ -136,48 +150,6 @@ fun CanvasElementItem(
                         color = Color(element.primaryColorHex)
                     )
                 }
-            }
-        }
-    }
-}
-
-/**
- * Selection dashed outline with layer management (front/back/duplicate/delete) actions.
- */
-@Composable
-fun BoxScope.SelectionOverlay(
-    onFront: () -> Unit,
-    onBack: () -> Unit,
-    onDuplicate: () -> Unit,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .matchParentSize()
-            .border(width = 2.dp, color = BiteyOrange, shape = RoundedCornerShape(8.dp))
-    ) {
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset(y = (-36).dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xDD2B2120))
-                .padding(horizontal = 6.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onFront, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Rounded.ArrowUpward, contentDescription = "Front", tint = StickerDieCutWhite, modifier = Modifier.size(14.dp))
-            }
-            IconButton(onClick = onBack, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Rounded.ArrowDownward, contentDescription = "Back", tint = StickerDieCutWhite, modifier = Modifier.size(14.dp))
-            }
-            IconButton(onClick = onDuplicate, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Rounded.ContentCopy, contentDescription = "Duplicate", tint = StickerDieCutWhite, modifier = Modifier.size(14.dp))
-            }
-            IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Rounded.Delete, contentDescription = "Delete", tint = Color(0xFFE57373), modifier = Modifier.size(14.dp))
             }
         }
     }

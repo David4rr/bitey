@@ -77,6 +77,10 @@ class ScrapbookViewModel @Inject constructor(
         _elements.update { CanvasElementOps.updateTransform(it, id, panX, panY, zoom, rotationDelta) }
     }
 
+    fun rotateElement(id: String, deltaDegrees: Float = 45f) {
+        _elements.update { CanvasElementOps.rotateElement(it, id, deltaDegrees) }
+    }
+
     fun bringToFront(id: String) { _elements.update { CanvasElementOps.bringToFront(it, id) } }
     fun sendToBack(id: String) { _elements.update { CanvasElementOps.sendToBack(it, id) } }
 

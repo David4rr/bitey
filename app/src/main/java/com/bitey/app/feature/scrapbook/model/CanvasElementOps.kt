@@ -64,6 +64,12 @@ object CanvasElementOps {
         }
     }
 
+    fun rotateElement(elements: List<CanvasElement>, id: String, deltaDegrees: Float = 45f): List<CanvasElement> {
+        return elements.map { el ->
+            if (el.id == id) el.copy(rotation = (el.rotation + deltaDegrees) % 360f) else el
+        }
+    }
+
     fun bringToFront(elements: List<CanvasElement>, id: String): List<CanvasElement> {
         val maxZ = elements.maxOfOrNull { it.zIndex } ?: 0f
         return elements.map { el ->

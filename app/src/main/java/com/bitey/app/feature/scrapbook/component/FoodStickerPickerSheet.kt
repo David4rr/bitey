@@ -15,14 +15,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
 import com.bitey.app.core.ui.neumorphic.minimalistCard
+import com.bitey.app.core.ui.theme.CherryBombOneFontFamily
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import java.io.File
 
@@ -80,19 +84,37 @@ fun FoodStickerPickerSheet(
             ) {
                 items(entries, key = { it.entry.id }) { item ->
                     val path = item.entry.stickerImagePath ?: item.entry.fullImagePath
-                    Box(
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(16.dp))
                             .minimalistCard(cornerRadius = 16.dp)
                             .clickable { onSelectSticker(item) }
-                            .padding(8.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(horizontal = 6.dp, vertical = 8.dp)
                     ) {
-                        AsyncImage(
-                            model = File(path),
-                            contentDescription = item.entry.title,
-                            modifier = Modifier.fillMaxSize().dieCutStickerEffect(),
-                            contentScale = ContentScale.Fit
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .padding(2.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = File(path),
+                                contentDescription = item.entry.title,
+                                modifier = Modifier.fillMaxSize().dieCutStickerEffect(),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = item.entry.title.ifBlank { "Sticker" },
+                            fontFamily = CherryBombOneFontFamily,
+                            fontSize = 12.sp,
+                            color = theme.inkPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }

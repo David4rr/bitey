@@ -96,6 +96,7 @@ fun ScrapbookScreen(
             onBringToFront = { viewModel.bringToFront(it) },
             onSendToBack = { viewModel.sendToBack(it) },
             onDuplicate = { viewModel.duplicateElement(it) },
+            onRotate = { id, delta -> viewModel.rotateElement(id, delta) },
             onDelete = { viewModel.deleteElement(it) },
             onViewportSizeChanged = { w, h -> viewportWidthPx = w; viewportHeightPx = h },
             modifier = Modifier.weight(1f)

@@ -123,4 +123,19 @@ class ScrapbookCanvasTest {
         assertEquals("2", remaining.first().id)
         assertNull(selectedId)
     }
+
+    @Test
+    fun rotateElement_incrementsRotationAndWrapsModulo360() {
+        val el1 = CanvasElement(id = "sticker-1", type = CanvasElementType.FOOD_STICKER, rotation = 0f)
+        val el2 = CanvasElement(id = "sticker-2", type = CanvasElementType.WASHI_TAPE, rotation = 45f)
+        val list = listOf(el1, el2)
+
+        val rotated1 = com.bitey.app.feature.scrapbook.model.CanvasElementOps.rotateElement(list, "sticker-1", 45f)
+        assertEquals(45f, rotated1.first { it.id == "sticker-1" }.rotation, 0.001f)
+        assertEquals(45f, rotated1.first { it.id == "sticker-2" }.rotation, 0.001f) // Unaffected
+
+        // Rotate past 360 degrees
+        val rotatedFull = com.bitey.app.feature.scrapbook.model.CanvasElementOps.rotateElement(rotated1, "sticker-1", 330f)
+        assertEquals(15f, rotatedFull.first { it.id == "sticker-1" }.rotation, 0.001f)
+    }
 }

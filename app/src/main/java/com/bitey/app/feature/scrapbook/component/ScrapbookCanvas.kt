@@ -25,6 +25,7 @@ import com.bitey.app.core.ui.neumorphic.minimalistCard
 import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.core.ui.theme.StickerDieCutWhite
+import com.bitey.app.feature.scrapbook.ScrapbookThemeUtils
 import com.bitey.app.feature.scrapbook.model.CanvasAspectRatio
 import com.bitey.app.feature.scrapbook.model.CanvasElement
 import kotlin.math.roundToInt
@@ -45,6 +46,7 @@ fun ScrapbookCanvas(
     onBringToFront: (String) -> Unit,
     onSendToBack: (String) -> Unit,
     onDuplicate: (String) -> Unit,
+    onRotate: (String, Float) -> Unit,
     onDelete: (String) -> Unit,
     onViewportSizeChanged: (Float, Float) -> Unit,
     modifier: Modifier = Modifier
@@ -78,15 +80,15 @@ fun ScrapbookCanvas(
                     modifier = Modifier.padding(24.dp)
                 ) {
                     Text(
-                        text = "Blank Story Canvas",
+                        text = "Story Canvas",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = if (backgroundColorHex == 0xFF263238L) StickerDieCutWhite else theme.inkPrimary
+                        color = ScrapbookThemeUtils.getCanvasPrimaryTextColor(backgroundColorHex)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Tap '+ Sticker' or '+ Accessory' below to craft your scrapbook.",
+                        text = "Add food stickers and accessories below",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (backgroundColorHex == 0xFF263238L) theme.inkMuted else theme.inkSecondary,
+                        color = ScrapbookThemeUtils.getCanvasSecondaryTextColor(backgroundColorHex),
                         textAlign = TextAlign.Center
                     )
                 }
@@ -106,12 +108,13 @@ fun ScrapbookCanvas(
                             }
                         }
                 ) {
-                    CanvasElementItem(element = element)
+                    CanvasElementItem(element = element, backgroundColorHex = backgroundColorHex)
                     if (isSelected) {
                         SelectionOverlay(
                             onFront = { onBringToFront(element.id) },
                             onBack = { onSendToBack(element.id) },
                             onDuplicate = { onDuplicate(element.id) },
+                            onRotate = { delta -> onRotate(element.id, delta) },
                             onDelete = { onDelete(element.id) }
                         )
                     }

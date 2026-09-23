@@ -13,50 +13,50 @@ import java.io.File
 
 object CanvasElementDrawer {
 
-    fun drawFoodSticker(canvas: Canvas, element: CanvasElement) {
+    fun drawFoodSticker(
+        canvas: Canvas,
+        element: CanvasElement,
+        backgroundColorHex: Long = 0xFFF4F1EAL,
+        customTypeface: Typeface? = null
+    ) {
         val path = element.imagePath ?: return
         val file = File(path)
         if (!file.exists()) return
 
-        val targetSize = 300
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.absolutePath, options)
+        var sampleSize = 1
+        while (options.outWidth / (sampleSize * 2) >= 300 && options.outHeight / (sampleSize * 2) >= 300) sampleSize *= 2
 
-        var inSampleSize = 1
-        while (options.outWidth / (inSampleSize * 2) >= targetSize && options.outHeight / (inSampleSize * 2) >= targetSize) {
-            inSampleSize *= 2
-        }
-
-        val decodeOptions = BitmapFactory.Options().apply {
-            this.inSampleSize = inSampleSize
-            inPreferredConfig = Bitmap.Config.ARGB_8888
-        }
+        val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize; inPreferredConfig = Bitmap.Config.ARGB_8888 }
         val stickerBitmap = BitmapFactory.decodeFile(file.absolutePath, decodeOptions) ?: return
-
         val halfW = stickerBitmap.width / 2f
         val halfH = stickerBitmap.height / 2f
-
         canvas.drawBitmap(stickerBitmap, -halfW, -halfH, null)
         stickerBitmap.recycle()
+
+        element.text?.takeIf { it.isNotBlank() }?.let { title ->
+            val isDark = ((backgroundColorHex shr 16 and 0xFF) * 0.299f + (backgroundColorHex shr 8 and 0xFF) * 0.587f + (backgroundColorHex and 0xFF) * 0.114f) / 255f < 0.5f
+            val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = if (isDark) Color.WHITE else 0xFF261C1A.toInt()
+                textSize = 24f
+                typeface = customTypeface ?: Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                textAlign = Paint.Align.CENTER
+            }
+            canvas.drawText(title, 0f, halfH + 28f, textPaint)
+        }
     }
 
     fun drawDateStamp(canvas: Canvas, element: CanvasElement) {
         val text = element.text ?: "TODAY"
         val subtitle = element.subtitle ?: "FOOD LOG"
+        val rect = RectF(-120f, -50f, 120f, 50f)
 
-        val width = 240f
-        val height = 100f
-        val rect = RectF(-width / 2f, -height / 2f, width / 2f, height / 2f)
-
-        // Stamp border
         val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = element.primaryColorHex.toInt()
-            style = Paint.Style.STROKE
-            strokeWidth = 4f
+            color = element.primaryColorHex.toInt(); style = Paint.Style.STROKE; strokeWidth = 4f
         }
         canvas.drawRoundRect(rect, 12f, 12f, borderPaint)
 
-        // Inner dashed line
         val innerRect = RectF(rect.left + 8f, rect.top + 8f, rect.right - 8f, rect.bottom - 8f)
         val dashPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = element.primaryColorHex.toInt()

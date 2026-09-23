@@ -59,6 +59,7 @@ class CanvasBitmapRenderer @Inject constructor(
 
         val centerX = targetWidth / 2f
         val centerY = targetHeight / 2f
+        val cherryBombTypeface = androidx.core.content.res.ResourcesCompat.getFont(context, com.bitey.app.R.font.cherry_bomb_one)
 
         // Draw elements in z-order
         val sortedElements = elements.sortedBy { it.zIndex }
@@ -74,7 +75,7 @@ class CanvasBitmapRenderer @Inject constructor(
             canvas.scale(finalElementScale, finalElementScale)
 
             when (element.type) {
-                CanvasElementType.FOOD_STICKER -> CanvasElementDrawer.drawFoodSticker(canvas, element)
+                CanvasElementType.FOOD_STICKER -> CanvasElementDrawer.drawFoodSticker(canvas, element, backgroundColorHex, cherryBombTypeface)
                 CanvasElementType.DATE_STAMP -> CanvasElementDrawer.drawDateStamp(canvas, element)
                 CanvasElementType.WASHI_TAPE -> CanvasElementDrawer.drawWashiTape(canvas, element)
                 CanvasElementType.LOCATION_TAG -> CanvasElementDrawer.drawLocationTag(canvas, element)
