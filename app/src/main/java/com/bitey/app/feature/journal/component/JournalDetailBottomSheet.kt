@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.bitey.app.core.ui.LocalAnimatedVisibilityScope
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
@@ -37,28 +38,35 @@ fun JournalDetailBottomSheet(
 ) {
     val theme = LocalNeumorphicTheme.current
     val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current
     val configuration = LocalConfiguration.current
-    val maxSheetHeight = (configuration.screenHeightDp.dp - 64.dp).coerceAtLeast(320.dp)
+    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(tween(200)),
-        exit = fadeOut(tween(180)),
+        enter = fadeIn(tween(220)),
+        exit = fadeOut(tween(200)),
         modifier = modifier.fillMaxSize()
     ) {
         CompositionLocalProvider(LocalAnimatedVisibilityScope provides this) {
-            val dragOffset = remember { Animatable(0f) }
-            val slideOffset = remember { Animatable(1f) } // 1f = fully off-screen below
+            val offsetY = remember { Animatable(screenHeightPx) }
 
             LaunchedEffect(Unit) {
-                slideOffset.animateTo(
+                offsetY.animateTo(
                     targetValue = 0f,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
                 )
             }
 
             fun dismiss() {
                 coroutineScope.launch {
+                    offsetY.animateTo(
+                        targetValue = screenHeightPx,
+                        animationSpec = tween(220)
+                    )
                     onDismissRequest()
                 }
             }
@@ -67,10 +75,7 @@ fun JournalDetailBottomSheet(
                 dismiss()
             }
 
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.BottomCenter
-            ) {
+            Box(modifier = Modifier.fillMaxSize()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -85,30 +90,26 @@ fun JournalDetailBottomSheet(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = maxSheetHeight)
-                        .wrapContentHeight(Alignment.Bottom)
+                        .fillMaxHeight(0.88f)
                         .align(Alignment.BottomCenter)
                         .graphicsLayer {
-                            translationY = dragOffset.value + (size.height * slideOffset.value)
+                            translationY = offsetY.value
                         }
                         .draggable(
                             state = rememberDraggableState { delta ->
-                                if (delta > 0 || dragOffset.value > 0) {
+                                if (delta > 0 || offsetY.value > 0) {
                                     coroutineScope.launch {
-                                        dragOffset.snapTo((dragOffset.value + delta).coerceAtLeast(0f))
+                                        offsetY.snapTo((offsetY.value + delta).coerceAtLeast(0f))
                                     }
                                 }
                             },
                             orientation = Orientation.Vertical,
                             onDragStopped = { velocity ->
-                                if (dragOffset.value > 160f || velocity > 1200f) {
-                                    coroutineScope.launch {
-                                        dragOffset.animateTo(800f, tween(180))
-                                        dismiss()
-                                    }
+                                if (offsetY.value > screenHeightPx * 0.22f || velocity > 1200f) {
+                                    dismiss()
                                 } else {
                                     coroutineScope.launch {
-                                        dragOffset.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+                                        offsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
                                     }
                                 }
                             }

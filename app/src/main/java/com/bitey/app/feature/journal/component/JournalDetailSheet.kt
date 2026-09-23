@@ -44,7 +44,7 @@ fun JournalDetailSheet(
     availableTags: List<TagEntity> = emptyList(),
     initialStickerBounds: androidx.compose.ui.geometry.Rect? = null,
     onSaveEntry: ((PlateEntryEntity, List<TagEntity>) -> Unit)? = null,
-    onPreviewSticker: ((java.io.File, String, Boolean, String) -> Unit)? = null
+    onPreviewSticker: ((java.io.File, String, Boolean) -> Unit)? = null
 ) {
     var activeDish by remember(item, plate) { mutableStateOf(item) }
     val entry = activeDish.entry
