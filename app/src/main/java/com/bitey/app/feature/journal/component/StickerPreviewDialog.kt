@@ -1,13 +1,11 @@
 package com.bitey.app.feature.journal.component
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -21,8 +19,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -31,31 +32,58 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.bitey.app.core.image.CropTransparentTransformation
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
+
+private val PreviewFallbackScaleIn = scaleIn(initialScale = 0.75f)
 
 @Composable
 fun StickerPreviewDialog(
     imageFile: File,
     title: String,
     isSticker: Boolean = true,
+    sourceBounds: Rect? = null,
+    dishKey: String? = null,
     onDismiss: () -> Unit
 ) {
-    var isVisible by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    var previewBounds by remember { mutableStateOf<Rect?>(null) }
+    val progress = remember { Animatable(0f) }
+    var isDismissing by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        isVisible = true
+    val transition = remember(sourceBounds, previewBounds) {
+        SharedDishTransition.create(sourceBounds, previewBounds)
+    }
+
+    LaunchedEffect(previewBounds != null) {
+        if (previewBounds != null) {
+            progress.snapTo(0f)
+            progress.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            )
+        }
     }
 
     val dismissWithAnimation: () -> Unit = {
-        isVisible = false
-        coroutineScope.launch {
-            delay(150)
-            onDismiss()
+        if (!isDismissing) {
+            isDismissing = true
+            coroutineScope.launch {
+                progress.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(180)
+                )
+                onDismiss()
+            }
         }
+    }
+
+    BackHandler(enabled = true) {
+        dismissWithAnimation()
     }
 
     val imageRequest = remember(imageFile, isSticker) {
@@ -77,7 +105,7 @@ fun StickerPreviewDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = if (isVisible) 0.94f else 0f))
+                .background(Color.Black.copy(alpha = (0.94f * progress.value).coerceIn(0f, 0.94f)))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -85,30 +113,26 @@ fun StickerPreviewDialog(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            AnimatedVisibility(
-                visible = isVisible,
-                enter = fadeIn(tween(180)) + scaleIn(
-                    initialScale = 0.75f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioLowBouncy,
-                        stiffness = Spring.StiffnessMediumLow
+            AsyncImage(
+                model = imageRequest,
+                contentDescription = title,
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .fillMaxHeight(0.80f)
+                    .onGloballyPositioned { coords ->
+                        if (previewBounds == null) {
+                            previewBounds = coords.boundsInWindow()
+                        }
+                    }
+                    .sharedDishTransform(
+                        transition = transition,
+                        progress = progress.value,
+                        fallbackScale = 0.75f + 0.25f * progress.value,
+                        fallbackAlpha = progress.value
                     )
-                ),
-                exit = fadeOut(tween(150)) + scaleOut(
-                    targetScale = 0.75f,
-                    animationSpec = tween(150)
-                )
-            ) {
-                AsyncImage(
-                    model = imageRequest,
-                    contentDescription = title,
-                    modifier = Modifier
-                        .fillMaxWidth(0.92f)
-                        .fillMaxHeight(0.80f)
-                        .then(if (isSticker) Modifier.dieCutStickerEffect() else Modifier.clip(RoundedCornerShape(20.dp))),
-                    contentScale = ContentScale.Fit
-                )
-            }
+                    .then(if (isSticker) Modifier.dieCutStickerEffect() else Modifier.clip(RoundedCornerShape(20.dp))),
+                contentScale = ContentScale.Fit
+            )
 
             IconButton(
                 onClick = dismissWithAnimation,
@@ -120,7 +144,7 @@ fun StickerPreviewDialog(
                 Icon(
                     Icons.Rounded.Close,
                     contentDescription = "Close Preview",
-                    tint = Color.White.copy(alpha = 0.75f),
+                    tint = Color.White.copy(alpha = (0.75f * progress.value).coerceIn(0f, 0.75f)),
                     modifier = Modifier.size(22.dp)
                 )
             }

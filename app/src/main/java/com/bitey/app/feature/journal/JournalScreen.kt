@@ -1,191 +1,116 @@
 package com.bitey.app.feature.journal
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.bitey.app.core.database.model.MealType
-import com.bitey.app.core.ui.component.MorphingSearchBar
-import com.bitey.app.core.ui.theme.BiteyOrange
-import com.bitey.app.core.ui.theme.BrandWordmarkStyle
+import com.bitey.app.core.ui.LocalAnimatedVisibilityScope
+import com.bitey.app.core.ui.LocalSharedTransitionScope
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
-import com.bitey.app.feature.journal.component.*
+import com.bitey.app.feature.journal.component.JournalDetailBottomSheet
+import com.bitey.app.feature.journal.component.JournalDetailSheet
+import com.bitey.app.feature.journal.component.JournalFeedView
+import com.bitey.app.feature.journal.component.StickerPreviewOverlay
+import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun JournalScreen(
     viewModel: JournalViewModel = hiltViewModel(),
     onNavigateToNewEntry: () -> Unit = {},
     onNavigateToFootprints: () -> Unit = {},
     onNavigateToFateTable: () -> Unit = {},
-    onNavigateToScrapbook: () -> Unit = {}
+    onNavigateToScrapbook: () -> Unit = {},
+    onJournalDetailVisibilityChange: (Boolean) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val theme = LocalNeumorphicTheme.current
     var isSearchActive by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().background(theme.background)) {
-        MorphingSearchBar(
-            isSearchActive = isSearchActive,
-            onSearchActiveChange = { isSearchActive = it },
-            searchQuery = uiState.searchQuery,
-            onSearchQueryChange = { viewModel.updateSearchQuery(it) },
-            titleContent = {
-                Text(text = "Bitey", style = BrandWordmarkStyle, color = BiteyOrange)
-            }
-        )
+    var previewFile by remember { mutableStateOf<File?>(null) }
+    var previewTitle by remember { mutableStateOf("") }
+    var previewIsSticker by remember { mutableStateOf(true) }
 
-        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-            Row(modifier = Modifier.fillMaxSize()) {
-                JournalSideRail(
-                    isGridView = uiState.isGridView,
-                    onToggleGridView = { viewModel.setGridView(!uiState.isGridView) },
-                    onNavigateToFootprints = onNavigateToFootprints,
-                    onNavigateToFateTable = onNavigateToFateTable,
-                    onNavigateToScrapbook = onNavigateToScrapbook
-                )
-
-                Box(modifier = Modifier.weight(1f).fillMaxHeight().clipToBounds()) {
-                    when {
-                        uiState.plates.isEmpty() && uiState.totalEntriesCount == 0 -> {
-                            EmptyJournalPrompt(onCaptureClick = onNavigateToNewEntry)
-                        }
-                        uiState.plates.isEmpty() -> {
-                            NoSearchResultsPrompt(
-                                onClearFilters = {
-                                    viewModel.updateSearchQuery("")
-                                    viewModel.selectMealType(null)
-                                    viewModel.selectTag(null)
-                                    if (uiState.isFavoritesOnly) viewModel.toggleFavoritesOnly()
-                                }
-                            )
-                        }
-                        uiState.isGridView -> {
-                            val pagerState = rememberPagerState(pageCount = { uiState.plates.size })
-                            HorizontalPager(
-                                state = pagerState,
-                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 64.dp),
-                                pageSpacing = 16.dp,
-                                key = { uiState.plates[it].id },
-                                modifier = Modifier.fillMaxSize().clipToBounds()
-                            ) { page ->
-                                val plate = uiState.plates[page]
-                                Box(
-                                    modifier = Modifier.fillMaxSize().graphicsLayer {
-                                        val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
-                                        alpha = if (pageOffset > 0) (1f - pageOffset * 1.5f).coerceIn(0f, 1f) else 1f
-                                        if (pageOffset > 0) {
-                                            scaleX = (1f - pageOffset * 0.08f).coerceIn(0.92f, 1f)
-                                            scaleY = (1f - pageOffset * 0.08f).coerceIn(0.92f, 1f)
-                                        }
-                                    },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    HistoryGridPlateCard(
-                                        plate = plate,
-                                        isCurrentPage = pagerState.currentPage == page,
-                                        onClick = { viewModel.selectPlateForDetail(plate) },
-                                        onToggleFavorite = { viewModel.toggleFavorite(plate.primaryEntry) }
-                                    )
-                                }
-                            }
-                        }
-                        else -> {
-                            LazyColumn(
-                                contentPadding = PaddingValues(start = 6.dp, end = 16.dp, top = 2.dp, bottom = 68.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                uiState.dateGroups.forEach { group ->
-                                    item(key = "header_${group.dateLabel}") {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp)
-                                        ) {
-                                            Text(
-                                                text = group.dateLabel,
-                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                                color = theme.inkSecondary,
-                                                letterSpacing = 0.5.sp
-                                            )
-                                            val totalDishes = group.plates.sumOf { it.entries.size }
-                                            Text(
-                                                text = "$totalDishes bites${if (group.plates.size > 1) " • ${group.plates.size} plates" else ""}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = theme.inkMuted,
-                                                fontSize = 11.sp
-                                            )
-                                        }
-                                    }
-
-                                    group.plates.forEach { plate ->
-                                        if (plate.isMergedPlate) {
-                                            item(key = "plate_group_${plate.id}") {
-                                                PlateGroupHeader(plate = plate)
-                                            }
-                                        }
-                                        items(plate.entries, key = { it.entry.id }) { dish ->
-                                            PlateEntryCard(
-                                                item = dish,
-                                                onClick = { viewModel.selectPlateForDetail(plate, dish) },
-                                                onToggleFavorite = { viewModel.toggleFavorite(dish.entry) }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            JournalFilterBar(
-                selectedMealType = uiState.selectedMealType,
-                onSelectMealType = { viewModel.selectMealType(it) },
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
+    LaunchedEffect(uiState.selectedEntryForDetail) {
+        if (uiState.selectedEntryForDetail == null) {
+            previewFile = null
         }
+        onJournalDetailVisibilityChange(uiState.selectedEntryForDetail != null)
     }
 
-    uiState.selectedEntryForDetail?.let { item ->
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ModalBottomSheet(
-            onDismissRequest = { viewModel.selectPlateForDetail(null) },
-            sheetState = sheetState,
-            containerColor = theme.surface,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            dragHandle = null
-        ) {
-            JournalDetailSheet(
-                item = item,
-                plate = uiState.selectedPlateForDetail,
-                availableTags = uiState.availableTags,
-                onClose = { viewModel.selectPlateForDetail(null) },
-                onToggleFavorite = { viewModel.toggleFavorite(item.entry) },
-                onDelete = {
-                    viewModel.deleteEntry(item.entry)
-                    viewModel.selectPlateForDetail(null)
-                },
-                onSaveEntry = { updated, tags ->
-                    viewModel.updateEntry(updated, tags)
+    SharedTransitionLayout(modifier = Modifier.fillMaxSize().background(theme.background)) {
+        CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                AnimatedVisibility(
+                    visible = true,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    CompositionLocalProvider(LocalAnimatedVisibilityScope provides this) {
+                        JournalFeedView(
+                            uiState = uiState,
+                            isSearchActive = isSearchActive,
+                            onSearchActiveChange = { isSearchActive = it },
+                            onSearchQueryChange = { viewModel.updateSearchQuery(it) },
+                            onSelectMealType = { viewModel.selectMealType(it) },
+                            onSelectTag = { viewModel.selectTag(it?.tagId) },
+                            onToggleFavoritesOnly = { viewModel.toggleFavoritesOnly() },
+                            onToggleGridView = { viewModel.setGridView(!uiState.isGridView) },
+                            onDishClick = { plate, dish, _ ->
+                                viewModel.selectPlateForDetail(plate, dish)
+                            },
+                            onToggleFavorite = { viewModel.toggleFavorite(it) },
+                            onNavigateToNewEntry = onNavigateToNewEntry,
+                            onNavigateToFootprints = onNavigateToFootprints,
+                            onNavigateToFateTable = onNavigateToFateTable,
+                            onNavigateToScrapbook = onNavigateToScrapbook
+                        )
+                    }
                 }
-            )
+
+                JournalDetailBottomSheet(
+                    visible = uiState.selectedEntryForDetail != null,
+                    onDismissRequest = { viewModel.selectPlateForDetail(null) }
+                ) {
+                    uiState.selectedEntryForDetail?.let { selectedDish ->
+                        JournalDetailSheet(
+                            item = selectedDish,
+                            plate = uiState.selectedPlateForDetail,
+                            availableTags = uiState.availableTags,
+                            onClose = { viewModel.selectPlateForDetail(null) },
+                            onToggleFavorite = { viewModel.toggleFavorite(selectedDish.entry) },
+                            onDelete = {
+                                viewModel.deleteEntry(selectedDish.entry)
+                                viewModel.selectPlateForDetail(null)
+                            },
+                            onSaveEntry = { updated, tags ->
+                                viewModel.updateEntry(updated, tags)
+                            },
+                            onPreviewSticker = { file, title, isSticker ->
+                                previewFile = file
+                                previewTitle = title
+                                previewIsSticker = isSticker
+                            }
+                        )
+                    }
+                }
+
+                uiState.selectedEntryForDetail?.let { selectedDish ->
+                    StickerPreviewOverlay(
+                        visible = previewFile != null,
+                        imageFile = previewFile,
+                        title = previewTitle,
+                        dishKey = "dish_sticker_${selectedDish.entry.id}",
+                        isSticker = previewIsSticker,
+                        onDismiss = { previewFile = null }
+                    )
+                }
+            }
         }
     }
 }

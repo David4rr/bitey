@@ -14,11 +14,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -29,18 +35,20 @@ import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
 import com.bitey.app.core.ui.neumorphic.minimalistCard
 import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
+import com.bitey.app.core.ui.dishSharedElement
 import java.io.File
 import java.util.Locale
 
 @Composable
 fun StickerCard(
     item: PlateEntryWithTags,
-    onClick: () -> Unit,
+    onClick: (Rect?) -> Unit = {},
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val entry = item.entry
     val theme = LocalNeumorphicTheme.current
+    var stickerBounds by remember { mutableStateOf<Rect?>(null) }
     val imageFile = remember(entry) {
         File(if (entry.isStickerMode && entry.stickerImagePath != null) entry.stickerImagePath else entry.fullImagePath)
     }
@@ -49,14 +57,18 @@ fun StickerCard(
         modifier = modifier
             .fillMaxWidth()
             .minimalistCard(cornerRadius = 12.dp, elevation = 0.dp)
-            .clickable(onClick = onClick)
+            .clickable { onClick(stickerBounds) }
             .padding(12.dp)
     ) {
         Column {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f),
+                    .aspectRatio(1f)
+                    .dishSharedElement("dish_sticker_${entry.id}")
+                    .onGloballyPositioned { coords ->
+                        stickerBounds = coords.boundsInWindow()
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 if (entry.isStickerMode && entry.stickerImagePath != null) {

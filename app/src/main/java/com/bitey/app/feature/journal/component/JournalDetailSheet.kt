@@ -42,7 +42,9 @@ fun JournalDetailSheet(
     onToggleFavorite: () -> Unit,
     onDelete: () -> Unit,
     availableTags: List<TagEntity> = emptyList(),
-    onSaveEntry: ((PlateEntryEntity, List<TagEntity>) -> Unit)? = null
+    initialStickerBounds: androidx.compose.ui.geometry.Rect? = null,
+    onSaveEntry: ((PlateEntryEntity, List<TagEntity>) -> Unit)? = null,
+    onPreviewSticker: ((java.io.File, String, Boolean) -> Unit)? = null
 ) {
     var activeDish by remember(item, plate) { mutableStateOf(item) }
     val entry = activeDish.entry
@@ -136,8 +138,10 @@ fun JournalDetailSheet(
                 JournalDetailContent(
                     item = item, plate = plate, availableTags = availableTags,
                     isFavorite = activeDish.entry.isFavorite, onToggleFavorite = onToggleFavorite,
+                    initialStickerBounds = initialStickerBounds,
                     onActiveDishChange = { activeDish = it }, onClose = onClose,
-                    onEntryChange = { updated, tags -> onSaveEntry?.invoke(updated, tags) }
+                    onEntryChange = { updated, tags -> onSaveEntry?.invoke(updated, tags) },
+                    onPreviewSticker = onPreviewSticker
                 )
             }
         }

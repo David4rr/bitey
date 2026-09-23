@@ -3,6 +3,7 @@ package com.bitey.app.feature.journal.component
 import android.app.DatePickerDialog
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -21,7 +22,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -36,6 +40,7 @@ import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.database.model.TagEntity
 import com.bitey.app.core.image.CropTransparentTransformation
 import com.bitey.app.core.ui.component.AnimatedFavoriteButton
+import com.bitey.app.core.ui.dishSharedElement
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
 import com.bitey.app.core.ui.theme.*
 import com.bitey.app.feature.entry.component.NewTagDialog
@@ -53,9 +58,11 @@ fun JournalDetailContent(
     modifier: Modifier = Modifier,
     plate: com.bitey.app.feature.journal.JournalPlate? = null,
     isFavorite: Boolean = item.entry.isFavorite,
+    initialStickerBounds: Rect? = null,
     onToggleFavorite: (() -> Unit)? = null,
     onActiveDishChange: ((PlateEntryWithTags) -> Unit)? = null,
-    onClose: (() -> Unit)? = null
+    onClose: (() -> Unit)? = null,
+    onPreviewSticker: ((File, String, Boolean) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val theme = LocalNeumorphicTheme.current
@@ -93,6 +100,8 @@ fun JournalDetailContent(
             else listOf(if (isStickerMode && entry.stickerImagePath != null) entry.stickerImagePath!! else entry.fullImagePath)
         }
     }
+
+    var restingStickerBounds by remember(activeDish.entry.id) { mutableStateOf<Rect?>(null) }
 
     var title by remember(activeDish.entry.id) { mutableStateOf(activeDish.entry.title) }
     var tempTitle by remember(activeDish.entry.id) { mutableStateOf(activeDish.entry.title) }
@@ -493,14 +502,42 @@ fun JournalDetailContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                val enterTransition = remember(initialStickerBounds, restingStickerBounds) {
+                    SharedDishTransition.create(initialStickerBounds, restingStickerBounds)
+                }
+                val stickerProgress = rememberSharedDishTransitionProgress(
+                    key = activeDish.entry.id,
+                    hasSource = initialStickerBounds != null,
+                    isTargetReady = restingStickerBounds != null
+                )
+
                 if (carouselStickers.size <= 1) {
                     Box(
                         modifier = Modifier
                             .size(165.dp)
+                            .dishSharedElement("dish_sticker_${activeDish.entry.id}")
+                            .onGloballyPositioned { coords ->
+                                restingStickerBounds = coords.boundsInWindow()
+                            }
+                            .sharedDishTransform(
+                                transition = enterTransition,
+                                progress = stickerProgress.value,
+                                fallbackScale = 0.65f + 0.35f * stickerProgress.value,
+                                fallbackAlpha = stickerProgress.value
+                            )
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onClick = { showPreview = true }
+                                onClick = {
+                                    if (onPreviewSticker != null) {
+                                        val displayFile = File(
+                                            if (isStickerMode && entry.stickerImagePath != null) currentStickerPath else entry.fullImagePath
+                                        )
+                                        onPreviewSticker(displayFile, title, isStickerMode && entry.stickerImagePath != null)
+                                    } else {
+                                        showPreview = true
+                                    }
+                                }
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -535,10 +572,27 @@ fun JournalDetailContent(
                         isStickerMode = isStickerMode,
                         onStickerClick = {
                             selectedStickerIndex = it
-                            showPreview = true
+                            if (onPreviewSticker != null) {
+                                val path = if (it in carouselStickers.indices) carouselStickers[it] else currentStickerPath
+                                onPreviewSticker(File(path), title, isStickerMode)
+                            } else {
+                                showPreview = true
+                            }
                         },
                         onActiveIndexChange = { selectedStickerIndex = it },
-                        modifier = Modifier.size(165.dp)
+                        modifier = Modifier
+                            .size(165.dp)
+                            .onGloballyPositioned { coords ->
+                                if (restingStickerBounds == null) {
+                                    restingStickerBounds = coords.boundsInWindow()
+                                }
+                            }
+                            .sharedDishTransform(
+                                transition = enterTransition,
+                                progress = stickerProgress.value,
+                                fallbackScale = 0.65f + 0.35f * stickerProgress.value,
+                                fallbackAlpha = stickerProgress.value
+                            )
                     )
                 }
             }
@@ -733,6 +787,8 @@ fun JournalDetailContent(
             imageFile = File(tappedPath),
             title = title,
             isSticker = isStickerMode && (entry.stickerImagePath != null || carouselStickers.isNotEmpty()),
+            sourceBounds = restingStickerBounds,
+            dishKey = "dish_sticker_${activeDish.entry.id}",
             onDismiss = { showPreview = false }
         )
     }

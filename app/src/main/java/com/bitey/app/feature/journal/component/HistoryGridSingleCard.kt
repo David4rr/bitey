@@ -9,7 +9,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.ui.theme.BiteyOrange
@@ -25,7 +28,7 @@ import com.bitey.app.feature.journal.JournalPlate
 fun HistoryGridPlateCard(
     plate: JournalPlate,
     isCurrentPage: Boolean = true,
-    onClick: () -> Unit,
+    onClick: (Rect?) -> Unit = {},
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -38,6 +41,7 @@ fun HistoryGridPlateCard(
     var isGravityEnabled by remember(plate.id) {
         mutableStateOf(StickerPositionCache.isGravityEnabled(plate.id, default = false))
     }
+    var aestheticRect by remember { mutableStateOf<Rect?>(null) }
 
     Box(
         modifier = modifier
@@ -47,7 +51,7 @@ fun HistoryGridPlateCard(
             .clip(bookCoverShape)
             .background(theme.surface)
             .border(1.dp, theme.border, bookCoverShape)
-            .clickable(onClick = onClick)
+            .clickable { onClick(aestheticRect) }
     ) {
         Row(modifier = Modifier.fillMaxSize()) {
             // Book spine & hinge crease effect on the left edge
@@ -91,6 +95,9 @@ fun HistoryGridPlateCard(
                         .fillMaxWidth()
                         .weight(1f)
                         .padding(vertical = 8.dp)
+                        .onGloballyPositioned { coords ->
+                            aestheticRect = coords.boundsInWindow()
+                        }
                         .clip(RoundedCornerShape(22.dp))
                         .background(
                             Brush.radialGradient(
@@ -113,7 +120,8 @@ fun HistoryGridPlateCard(
                         isStickerMode = plate.isStickerMode,
                         isGravityEnabled = isGravityEnabled && isCurrentPage,
                         contentDescription = plate.title,
-                        onClick = onClick
+                        onClick = { onClick(aestheticRect) },
+                        dishKey = plate.entries.firstOrNull()?.let { "dish_sticker_${it.entry.id}" }
                     )
                 }
 
@@ -145,7 +153,7 @@ fun HistoryGridSingleCard(
     HistoryGridPlateCard(
         plate = plate,
         isCurrentPage = isCurrentPage,
-        onClick = onClick,
+        onClick = { onClick() },
         onToggleFavorite = onToggleFavorite,
         modifier = modifier
     )
