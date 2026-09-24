@@ -1,6 +1,13 @@
 package com.bitey.app.feature.journal
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -13,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,7 +33,6 @@ import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.BrandWordmarkStyle
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.feature.journal.component.*
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JournalScreen(
@@ -98,7 +105,7 @@ fun JournalScreen(
                                 ) {
                                     HistoryGridPlateCard(
                                         plate = plate,
-                                        isCurrentPage = pagerState.currentPage == page,
+                                        isCurrentPage = pagerState.currentPage == page && uiState.selectedEntryForDetail == null,
                                         onClick = { viewModel.selectPlateForDetail(plate) },
                                         onToggleFavorite = { viewModel.toggleFavorite(plate.primaryEntry) }
                                     )

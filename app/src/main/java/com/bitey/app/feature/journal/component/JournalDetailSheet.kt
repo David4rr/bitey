@@ -44,11 +44,10 @@ fun JournalDetailSheet(
     availableTags: List<TagEntity> = emptyList(),
     onSaveEntry: ((PlateEntryEntity, List<TagEntity>) -> Unit)? = null
 ) {
-    var activeDish by remember(item, plate) { mutableStateOf(item) }
+    var activeDish by remember(item.entry.id, plate?.id) { mutableStateOf(item) }
     val entry = activeDish.entry
     val theme = LocalNeumorphicTheme.current
     var showDeleteConfirm by remember { mutableStateOf(false) }
-
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
     var overscrollOffset by remember { mutableFloatStateOf(0f) }
@@ -114,9 +113,12 @@ fun JournalDetailSheet(
             }
         }
     }
-
     Column(
-        modifier = Modifier.fillMaxWidth().background(theme.surface).padding(horizontal = 20.dp, vertical = 12.dp).nestedScroll(nestedScrollConnection)
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(theme.surface)
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .nestedScroll(nestedScrollConnection)
     ) {
         Box(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp), contentAlignment = Alignment.Center) {
             Box(modifier = Modifier.size(width = 40.dp, height = 4.dp).clip(CircleShape).background(theme.inkMuted.copy(alpha = 0.35f)))
@@ -150,7 +152,6 @@ fun JournalDetailSheet(
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp)
         )
     }
-
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },

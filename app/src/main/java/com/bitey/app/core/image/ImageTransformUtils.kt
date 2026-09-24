@@ -111,36 +111,69 @@ object ImageTransformUtils {
      * removing all empty transparent margins so the subject fills its layout bounds.
      */
     fun cropTransparentBounds(bitmap: Bitmap, paddingPx: Int = 4): Bitmap {
-        val safeBitmap = if (bitmap.config == Bitmap.Config.HARDWARE) {
-            bitmap.copy(Bitmap.Config.ARGB_8888, false) ?: bitmap
+        val maxDimension = 1024
+        val scaledBitmap = if (bitmap.width > maxDimension || bitmap.height > maxDimension) {
+            val scale = maxDimension.toFloat() / maxOf(bitmap.width, bitmap.height)
+            val targetW = (bitmap.width * scale).toInt().coerceAtLeast(1)
+            val targetH = (bitmap.height * scale).toInt().coerceAtLeast(1)
+            Bitmap.createScaledBitmap(bitmap, targetW, targetH, true)
         } else {
             bitmap
         }
+        val safeBitmap = if (scaledBitmap.config == Bitmap.Config.HARDWARE) {
+            scaledBitmap.copy(Bitmap.Config.ARGB_8888, false) ?: scaledBitmap
+        } else {
+            scaledBitmap
+        }
         val width = safeBitmap.width
         val height = safeBitmap.height
-        val pixels = IntArray(width * height)
-        safeBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        val row = IntArray(width)
+
+        var minY = -1
+        for (y in 0 until height) {
+            safeBitmap.getPixels(row, 0, width, 0, y, width, 1)
+            for (x in 0 until width) {
+                if (((row[x] ushr 24) and 0xFF) > 12) {
+                    minY = y
+                    break
+                }
+            }
+            if (minY != -1) break
+        }
+
+        if (minY == -1) {
+            if (safeBitmap != scaledBitmap && safeBitmap != bitmap) safeBitmap.recycle()
+            if (scaledBitmap != bitmap) scaledBitmap.recycle()
+            return bitmap
+        }
+
+        var maxY = minY
+        for (y in height - 1 downTo minY) {
+            safeBitmap.getPixels(row, 0, width, 0, y, width, 1)
+            for (x in 0 until width) {
+                if (((row[x] ushr 24) and 0xFF) > 12) {
+                    maxY = y
+                    break
+                }
+            }
+            if (maxY != minY) break
+        }
 
         var minX = width
-        var minY = height
         var maxX = -1
-        var maxY = -1
-
-        for (y in 0 until height) {
-            val rowOffset = y * width
+        for (y in minY..maxY) {
+            safeBitmap.getPixels(row, 0, width, 0, y, width, 1)
             for (x in 0 until width) {
-                val alpha = (pixels[rowOffset + x] ushr 24) and 0xFF
-                if (alpha > 12) {
+                if (((row[x] ushr 24) and 0xFF) > 12) {
                     if (x < minX) minX = x
                     if (x > maxX) maxX = x
-                    if (y < minY) minY = y
-                    if (y > maxY) maxY = y
                 }
             }
         }
 
         if (maxX < minX || maxY < minY) {
-            if (safeBitmap != bitmap) safeBitmap.recycle()
+            if (safeBitmap != scaledBitmap && safeBitmap != bitmap) safeBitmap.recycle()
+            if (scaledBitmap != bitmap) scaledBitmap.recycle()
             return bitmap
         }
 
@@ -154,8 +187,11 @@ object ImageTransformUtils {
         } else {
             Bitmap.createBitmap(safeBitmap, cropX, cropY, cropW, cropH)
         }
-        if (safeBitmap != bitmap && safeBitmap != cropped) {
+        if (safeBitmap != scaledBitmap && safeBitmap != cropped && safeBitmap != bitmap) {
             safeBitmap.recycle()
+        }
+        if (scaledBitmap != bitmap && scaledBitmap != cropped) {
+            scaledBitmap.recycle()
         }
         return cropped
     }
@@ -164,10 +200,21 @@ object ImageTransformUtils {
 /**
  * Coil Transformation that automatically removes empty transparent borders from stickers.
  */
-class CropTransparentTransformation : coil.transform.Transformation {
-    override val cacheKey: String = "CropTransparentTransformation"
+class CropTransparentTransformation(
+    val paddingPx: Int = 4
+) : coil.transform.Transformation {
+    override val cacheKey: String = "${CropTransparentTransformation::class.java.name}-$paddingPx"
 
     override suspend fun transform(input: Bitmap, size: coil.size.Size): Bitmap {
-        return ImageTransformUtils.cropTransparentBounds(input)
+        return ImageTransformUtils.cropTransparentBounds(input, paddingPx)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        return other is CropTransparentTransformation && paddingPx == other.paddingPx
+    }
+
+    override fun hashCode(): Int {
+        return javaClass.hashCode() * 31 + paddingPx
     }
 }

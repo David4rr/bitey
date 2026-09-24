@@ -3,6 +3,7 @@ package com.bitey.app.feature.journal.component
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
@@ -47,7 +48,11 @@ fun HistoryGridPlateCard(
             .clip(bookCoverShape)
             .background(theme.surface)
             .border(1.dp, theme.border, bookCoverShape)
-            .clickable(onClick = onClick)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
     ) {
         Row(modifier = Modifier.fillMaxSize()) {
             // Book spine & hinge crease effect on the left edge

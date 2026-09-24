@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -31,16 +32,19 @@ class JournalViewModel @Inject constructor(
     private val _selectedMealType = MutableStateFlow<MealType?>(null)
     private val _selectedTagId = MutableStateFlow<Long?>(null)
     private val _isGridView = MutableStateFlow(true)
-    private val _selectedPlateForDetail = MutableStateFlow<JournalPlate?>(null)
-    private val _selectedEntryForDetail = MutableStateFlow<PlateEntryWithTags?>(null)
+
+    private data class DetailSelection(
+        val plate: JournalPlate?,
+        val dish: PlateEntryWithTags?
+    )
+    private val _detailSelection = MutableStateFlow<DetailSelection?>(null)
 
     private data class FilterState(
         val query: String,
         val isFavoritesOnly: Boolean,
         val selectedMealType: MealType?,
         val selectedTagId: Long?,
-        val isGridView: Boolean,
-        val selectedEntryForDetail: PlateEntryWithTags?
+        val isGridView: Boolean
     )
 
     private val filterStateFlow = combine(
@@ -55,18 +59,24 @@ class JournalViewModel @Inject constructor(
             isFavoritesOnly = favOnly,
             selectedMealType = mealType,
             selectedTagId = tagId,
-            isGridView = isGrid,
-            selectedEntryForDetail = _selectedEntryForDetail.value
+            isGridView = isGrid
         )
     }
 
-    val uiState: StateFlow<JournalUiState> = combine(
+    private data class BaseJournalData(
+        val allEntries: List<PlateEntryWithTags>,
+        val filtered: List<PlateEntryWithTags>,
+        val plates: List<JournalPlate>,
+        val dateGroups: List<DateGroup>,
+        val tags: List<TagEntity>,
+        val filters: FilterState
+    )
+
+    private val baseJournalData = combine(
         plateEntryDao.getAllEntriesWithTags(),
         tagDao.getAllTags(),
-        filterStateFlow,
-        _selectedEntryForDetail,
-        _selectedPlateForDetail
-    ) { allEntries, tags, filters, detailEntry, detailPlate ->
+        filterStateFlow
+    ) { allEntries, tags, filters ->
         val trimmedQuery = filters.query.trim()
         val filtered = allEntries.filter { item ->
             // Filter by favorite
@@ -93,10 +103,9 @@ class JournalViewModel @Inject constructor(
         }
 
         val plates = clusterIntoPlates(filtered)
-
-        // Group plates chronologically by calendar date
+        val now = System.currentTimeMillis()
         val dateGroups = plates
-            .groupBy { plate -> formatDateHeader(plate.timestamp) }
+            .groupBy { plate -> formatDateHeader(plate.timestamp, now) }
             .map { (dateLabel, groupPlates) ->
                 DateGroup(
                     dateLabel = dateLabel,
@@ -105,25 +114,31 @@ class JournalViewModel @Inject constructor(
                 )
             }
 
-        val currentDetailEntry = detailEntry?.let { current ->
-            allEntries.find { it.entry.id == current.entry.id } ?: current
-        }
+        BaseJournalData(allEntries, filtered, plates, dateGroups, tags, filters)
+    }.flowOn(Dispatchers.Default)
 
-        val currentDetailPlate = detailPlate?.let { current ->
-            plates.find { it.id == current.id } ?: current
+    val uiState: StateFlow<JournalUiState> = combine(
+        baseJournalData,
+        _detailSelection
+    ) { base, selection ->
+        val currentDetailEntry = selection?.dish?.let { current ->
+            base.allEntries.find { it.entry.id == current.entry.id } ?: current
+        }
+        val currentDetailPlate = selection?.plate?.let { current ->
+            base.plates.find { it.id == current.id } ?: current
         }
 
         JournalUiState(
-            entries = filtered,
-            plates = plates,
-            dateGroups = dateGroups,
-            totalEntriesCount = allEntries.size,
-            searchQuery = filters.query,
-            isFavoritesOnly = filters.isFavoritesOnly,
-            selectedMealType = filters.selectedMealType,
-            selectedTagId = filters.selectedTagId,
-            availableTags = tags,
-            isGridView = filters.isGridView,
+            entries = base.filtered,
+            plates = base.plates,
+            dateGroups = base.dateGroups,
+            totalEntriesCount = base.allEntries.size,
+            searchQuery = base.filters.query,
+            isFavoritesOnly = base.filters.isFavoritesOnly,
+            selectedMealType = base.filters.selectedMealType,
+            selectedTagId = base.filters.selectedTagId,
+            availableTags = base.tags,
+            isGridView = base.filters.isGridView,
             isLoading = false,
             selectedEntryForDetail = currentDetailEntry,
             selectedPlateForDetail = currentDetailPlate
@@ -134,28 +149,18 @@ class JournalViewModel @Inject constructor(
         initialValue = JournalUiState()
     )
 
-    private fun formatDateHeader(timestamp: Long): String {
-        val entryCal = java.util.Calendar.getInstance().apply { timeInMillis = timestamp }
-        val todayCal = java.util.Calendar.getInstance()
-        val isToday = entryCal.get(java.util.Calendar.YEAR) == todayCal.get(java.util.Calendar.YEAR) &&
-                entryCal.get(java.util.Calendar.DAY_OF_YEAR) == todayCal.get(java.util.Calendar.DAY_OF_YEAR)
+    private val dayMonthFormat = java.text.SimpleDateFormat("dd MMMM", java.util.Locale.US)
+    private val fullDateFormat = java.text.SimpleDateFormat("EEEE, dd MMMM yyyy", java.util.Locale.US)
 
-        val yesterdayCal = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -1) }
-        val isYesterday = entryCal.get(java.util.Calendar.YEAR) == yesterdayCal.get(java.util.Calendar.YEAR) &&
-                entryCal.get(java.util.Calendar.DAY_OF_YEAR) == yesterdayCal.get(java.util.Calendar.DAY_OF_YEAR)
+    private fun formatDateHeader(timestamp: Long, now: Long = System.currentTimeMillis()): String {
+        val tz = java.util.TimeZone.getDefault()
+        val entryDay = (timestamp + tz.getOffset(timestamp)) / 86_400_000L
+        val nowDay = (now + tz.getOffset(now)) / 86_400_000L
 
-        return when {
-            isToday -> {
-                val dayStr = java.text.SimpleDateFormat("dd MMMM", java.util.Locale.US).format(java.util.Date(timestamp))
-                "Today • $dayStr"
-            }
-            isYesterday -> {
-                val dayStr = java.text.SimpleDateFormat("dd MMMM", java.util.Locale.US).format(java.util.Date(timestamp))
-                "Yesterday • $dayStr"
-            }
-            else -> {
-                java.text.SimpleDateFormat("EEEE, dd MMMM yyyy", java.util.Locale.US).format(java.util.Date(timestamp))
-            }
+        return when (entryDay) {
+            nowDay -> "Today • " + synchronized(dayMonthFormat) { dayMonthFormat.format(java.util.Date(timestamp)) }
+            nowDay - 1L -> "Yesterday • " + synchronized(dayMonthFormat) { dayMonthFormat.format(java.util.Date(timestamp)) }
+            else -> synchronized(fullDateFormat) { fullDateFormat.format(java.util.Date(timestamp)) }
         }
     }
 
@@ -188,12 +193,27 @@ class JournalViewModel @Inject constructor(
     }
 
     fun selectEntryForDetail(entry: PlateEntryWithTags?) {
-        _selectedEntryForDetail.value = entry
+        _detailSelection.update { current ->
+            if (entry != null) {
+                val plate = current?.plate ?: JournalPlate(
+                    id = entry.entry.plateSessionId ?: "plate_${entry.entry.id}",
+                    venueName = entry.entry.locationName,
+                    timestamp = entry.entry.timestamp,
+                    entries = listOf(entry)
+                )
+                DetailSelection(plate, entry)
+            } else {
+                null
+            }
+        }
     }
 
     fun selectPlateForDetail(plate: JournalPlate?, selectedDish: PlateEntryWithTags? = null) {
-        _selectedPlateForDetail.value = plate
-        _selectedEntryForDetail.value = selectedDish ?: plate?.entries?.firstOrNull()
+        _detailSelection.value = if (plate != null) {
+            DetailSelection(plate, selectedDish ?: plate.entries.firstOrNull())
+        } else {
+            null
+        }
     }
 
     companion object {
@@ -249,19 +269,18 @@ class JournalViewModel @Inject constructor(
         }
 
         fun isSameDay(t1: Long, t2: Long): Boolean {
-            val cal1 = java.util.Calendar.getInstance().apply { timeInMillis = t1 }
-            val cal2 = java.util.Calendar.getInstance().apply { timeInMillis = t2 }
-            return cal1.get(java.util.Calendar.ERA) == cal2.get(java.util.Calendar.ERA) &&
-                   cal1.get(java.util.Calendar.YEAR) == cal2.get(java.util.Calendar.YEAR) &&
-                   cal1.get(java.util.Calendar.DAY_OF_YEAR) == cal2.get(java.util.Calendar.DAY_OF_YEAR)
+            val tz = java.util.TimeZone.getDefault()
+            val day1 = (t1 + tz.getOffset(t1)) / 86_400_000L
+            val day2 = (t2 + tz.getOffset(t2)) / 86_400_000L
+            return day1 == day2
         }
     }
 
     fun toggleFavorite(entry: PlateEntryEntity) {
         val newFav = !entry.isFavorite
-        _selectedEntryForDetail.update { current ->
-            if (current?.entry?.id == entry.id) {
-                current.copy(entry = current.entry.copy(isFavorite = newFav))
+        _detailSelection.update { current ->
+            if (current?.dish?.entry?.id == entry.id) {
+                current.copy(dish = current.dish.copy(entry = current.dish.entry.copy(isFavorite = newFav)))
             } else current
         }
         viewModelScope.launch(Dispatchers.IO) {
@@ -272,22 +291,33 @@ class JournalViewModel @Inject constructor(
     fun deleteEntry(entry: PlateEntryEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             plateEntryDao.deleteEntry(entry)
-            if (_selectedEntryForDetail.value?.entry?.id == entry.id) {
-                _selectedEntryForDetail.value = null
+            if (_detailSelection.value?.dish?.entry?.id == entry.id) {
+                _detailSelection.value = null
             }
         }
     }
 
     fun updateEntry(entry: PlateEntryEntity, tags: List<TagEntity>) {
         viewModelScope.launch(Dispatchers.IO) {
-            val resolvedEntry = if (entry.latitude == null && !entry.locationName.isNullOrBlank()) {
+            plateEntryDao.updateEntryWithTags(entry, tags, tagDao)
+            _detailSelection.update { current ->
+                if (current?.dish?.entry?.id == entry.id) {
+                    current.copy(dish = PlateEntryWithTags(entry, tags))
+                } else current
+            }
+
+            if (entry.latitude == null && !entry.locationName.isNullOrBlank()) {
                 val coords = geocoderRepository.forwardGeocode(entry.locationName)
                 if (coords != null) {
-                    entry.copy(latitude = coords.latitude, longitude = coords.longitude)
-                } else entry
-            } else entry
-            plateEntryDao.updateEntryWithTags(resolvedEntry, tags, tagDao)
-            _selectedEntryForDetail.value = PlateEntryWithTags(resolvedEntry, tags)
+                    val withCoords = entry.copy(latitude = coords.latitude, longitude = coords.longitude)
+                    plateEntryDao.updateEntryWithTags(withCoords, tags, tagDao)
+                    _detailSelection.update { current ->
+                        if (current?.dish?.entry?.id == withCoords.id) {
+                            current.copy(dish = PlateEntryWithTags(withCoords, tags))
+                        } else current
+                    }
+                }
+            }
         }
     }
 }

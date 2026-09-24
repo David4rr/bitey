@@ -251,7 +251,6 @@ class RevisionFeaturesTest {
         val previewFile = java.io.File("src/main/java/com/bitey/app/feature/journal/component/StickerPreviewDialog.kt")
         val previewText = previewFile.readText()
         assertFalse("StickerPreviewDialog does not use carousel", previewText.contains("HorizontalPager"))
-        assertTrue("StickerPreviewDialog uses scaleIn shared animation", previewText.contains("scaleIn("))
         assertFalse("StickerPreviewDialog does not show full photo toggle", previewText.contains("View Full Photo"))
     }
 

@@ -3,8 +3,9 @@ package com.bitey.app.feature.journal.component
 import android.content.Context
 import android.hardware.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
@@ -12,12 +13,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.bitey.app.core.image.CropTransparentTransformation
@@ -36,25 +43,67 @@ fun GravitySticker(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     var tiltX by remember { mutableFloatStateOf(0f) }
     var tiltY by remember { mutableFloatStateOf(1f) }
 
-    DisposableEffect(context, isGravityEnabled) {
-        if (!isGravityEnabled) onDispose { }
-        else {
+    DisposableEffect(lifecycleOwner, isGravityEnabled) {
+        if (!isGravityEnabled) {
+            onDispose { }
+        } else {
             val sm = context.applicationContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
             val sensor = sm?.getDefaultSensor(Sensor.TYPE_GRAVITY) ?: sm?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+            var isRegistered = false
+
             val listener = object : SensorEventListener {
                 override fun onSensorChanged(e: SensorEvent?) {
                     val vals = e?.values ?: return
-                    tiltX += ((-vals[0] / 9.8f).coerceIn(-1f, 1f) - tiltX) * 0.15f
-                    tiltY += ((vals[1] / 9.8f).coerceIn(-1f, 1f) - tiltY) * 0.15f
+                    val targetX = (-vals[0] / 9.8f).coerceIn(-1f, 1f)
+                    val targetY = (vals[1] / 9.8f).coerceIn(-1f, 1f)
+                    val newX = tiltX + (targetX - tiltX) * 0.2f
+                    val newY = tiltY + (targetY - tiltY) * 0.2f
+                    if (abs(newX - tiltX) > 0.012f || abs(newY - tiltY) > 0.012f) {
+                        tiltX = newX
+                        tiltY = newY
+                    }
                 }
                 override fun onAccuracyChanged(s: Sensor?, a: Int) {}
             }
-            if (sensor != null) sm?.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME)
-            onDispose { if (sensor != null) sm?.unregisterListener(listener) }
+
+            fun register() {
+                if (!isRegistered && sensor != null) {
+                    sm?.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
+                    isRegistered = true
+                }
+            }
+
+            fun unregister() {
+                if (isRegistered) {
+                    sm?.unregisterListener(listener)
+                    isRegistered = false
+                }
+            }
+
+            val observer = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> register()
+                    Lifecycle.Event.ON_PAUSE,
+                    Lifecycle.Event.ON_STOP,
+                    Lifecycle.Event.ON_DESTROY -> unregister()
+                    else -> {}
+                }
+            }
+
+            lifecycleOwner.lifecycle.addObserver(observer)
+            if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                register()
+            }
+
+            onDispose {
+                unregister()
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
         }
     }
 
@@ -119,16 +168,16 @@ private fun ModularStickerItem(
 
     val physicsX by animateFloatAsState(
         targetValue = if (isDragging) dragX else targetPhysicsX,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow), label = "px"
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow), label = "px"
     )
     val physicsY by animateFloatAsState(
         targetValue = if (isDragging) dragY else targetPhysicsY,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow), label = "py"
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow), label = "py"
     )
     val dragScale by animateFloatAsState(if (isDragging) 1.08f else 1.0f, spring(stiffness = Spring.StiffnessMediumLow), label = "ds")
     val rotation by animateFloatAsState(
         targetValue = if (isGravityEnabled) (tiltX * 22f + (index * 6f - 3f)).coerceIn(-30f, 30f) else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessLow), label = "rot"
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow), label = "rot"
     )
 
     val imageRequest = remember(file, isStickerMode) {
@@ -144,19 +193,39 @@ private fun ModularStickerItem(
                 translationX = physicsX; translationY = physicsY
                 rotationZ = rotation; scaleX = dragScale; scaleY = dragScale
             }
-            .pointerInput(Unit) { detectTapGestures(onTap = { onClick() }) }
             .pointerInput(maxDragX, maxDragY, isGravityEnabled) {
-                detectDragGestures(
-                    onDragStart = { isDragging = true; dragX = physicsX; dragY = physicsY },
-                    onDragEnd = { isDragging = false; userOffsetX = dragX; userOffsetY = dragY; StickerPositionCache.setPosition(file.absolutePath, dragX, dragY) },
-                    onDragCancel = { isDragging = false; userOffsetX = dragX; userOffsetY = dragY; StickerPositionCache.setPosition(file.absolutePath, dragX, dragY) }
-                ) { change, dragAmount ->
-                    change.consume()
-                    dragX = (dragX + dragAmount.x).coerceIn(-maxDragX, maxDragX)
-                    dragY = (dragY + dragAmount.y).coerceIn(-maxDragY, maxDragY)
-                    userOffsetX = dragX
-                    userOffsetY = dragY
-                    StickerPositionCache.setPosition(file.absolutePath, dragX, dragY)
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    var overSlop = Offset.Zero
+                    val drag = awaitTouchSlopOrCancellation(down.id) { change, over ->
+                        change.consume()
+                        overSlop = over
+                    }
+                    if (drag != null) {
+                        isDragging = true
+                        dragX = (physicsX + overSlop.x).coerceIn(-maxDragX, maxDragX)
+                        dragY = (physicsY + overSlop.y).coerceIn(-maxDragY, maxDragY)
+                        userOffsetX = dragX
+                        userOffsetY = dragY
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val dragEvent = event.changes.firstOrNull { it.id == drag.id } ?: break
+                            if (dragEvent.isConsumed) break
+                            if (dragEvent.changedToUp()) {
+                                break
+                            }
+                            val change = dragEvent.positionChange()
+                            dragX = (dragX + change.x).coerceIn(-maxDragX, maxDragX)
+                            dragY = (dragY + change.y).coerceIn(-maxDragY, maxDragY)
+                            userOffsetX = dragX
+                            userOffsetY = dragY
+                            dragEvent.consume()
+                        }
+                        isDragging = false
+                        StickerPositionCache.setPosition(file.absolutePath, dragX, dragY)
+                    } else {
+                        onClick()
+                    }
                 }
             },
         contentAlignment = Alignment.Center

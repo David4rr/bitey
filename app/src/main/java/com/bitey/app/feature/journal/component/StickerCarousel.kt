@@ -1,5 +1,4 @@
 package com.bitey.app.feature.journal.component
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -11,9 +10,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import coil.compose.AsyncImage
@@ -31,7 +34,7 @@ fun StickerCarousel(
     stickers: List<String>,
     initialIndex: Int = 0,
     isStickerMode: Boolean = true,
-    onStickerClick: (index: Int) -> Unit = {},
+    onStickerClick: (index: Int, bounds: Rect?) -> Unit = { _, _ -> },
     onActiveIndexChange: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -76,6 +79,7 @@ fun StickerCarousel(
             val imageRequest = remember(file, isStickerMode) {
                 ImageRequest.Builder(context)
                     .data(file)
+                    .size(500, 500)
                     .apply {
                         if (isStickerMode) {
                             transformations(CropTransparentTransformation())
@@ -84,7 +88,8 @@ fun StickerCarousel(
                     .crossfade(true)
                     .build()
             }
-
+            val view = LocalView.current
+            var pageCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -93,10 +98,18 @@ fun StickerCarousel(
                         scaleY = scale
                         this.alpha = alpha
                     }
+                    .onGloballyPositioned { coords ->
+                        if (coords.isAttached) {
+                            pageCoordinates = coords
+                        }
+                    }
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = { onStickerClick(page) }
+                        onClick = {
+                            val bounds = pageCoordinates?.takeIf { it.isAttached }?.boundsOnScreen(view)
+                            onStickerClick(page, bounds)
+                        }
                     ),
                 contentAlignment = Alignment.Center
             ) {

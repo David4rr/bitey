@@ -1,5 +1,4 @@
 package com.bitey.app.feature.journal.component
-
 import android.app.DatePickerDialog
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
@@ -20,9 +19,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,6 +47,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
+private val detailDateFormatter = SimpleDateFormat("dd MMMM yyyy", Locale.US)
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun JournalDetailContent(
@@ -131,24 +135,6 @@ fun JournalDetailContent(
         }
     }
 
-    val calendar = remember(timestamp) { Calendar.getInstance().apply { timeInMillis = timestamp } }
-    val datePickerDialog = remember(timestamp) {
-        DatePickerDialog(
-            context,
-            { _, year, month, dayOfMonth ->
-                val updatedCal = Calendar.getInstance().apply {
-                    timeInMillis = timestamp
-                    set(Calendar.YEAR, year)
-                    set(Calendar.MONTH, month)
-                    set(Calendar.DAY_OF_MONTH, dayOfMonth)
-                }
-                timestamp = updatedCal.timeInMillis
-            },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        )
-    }
 
     var isFavoriteState by remember(activeDish.entry.id, activeDish.entry.isFavorite) { mutableStateOf(activeDish.entry.isFavorite) }
     LaunchedEffect(activeDish.entry.isFavorite) {
@@ -174,10 +160,10 @@ fun JournalDetailContent(
         }
     }
 
+    var thumbnailBounds by remember { mutableStateOf<Rect?>(null) }
+
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Hero Row: Dish Info (Title + Love Button, Stars, Category, Price & Place) on Left, Pure Food Sticker on Right
@@ -190,8 +176,7 @@ fun JournalDetailContent(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(end = 12.dp)
-                    .animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
+                    .padding(end = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Dish Title with Direct Inline Cardless Typography Edit + Love Button directly beside it
@@ -323,7 +308,24 @@ fun JournalDetailContent(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .clickable { datePickerDialog.show() }
+                        .clickable {
+                            val cal = Calendar.getInstance().apply { timeInMillis = timestamp }
+                            DatePickerDialog(
+                                context,
+                                { _, year, month, dayOfMonth ->
+                                    val updatedCal = Calendar.getInstance().apply {
+                                        timeInMillis = timestamp
+                                        set(Calendar.YEAR, year)
+                                        set(Calendar.MONTH, month)
+                                        set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                                    }
+                                    timestamp = updatedCal.timeInMillis
+                                },
+                                cal.get(Calendar.YEAR),
+                                cal.get(Calendar.MONTH),
+                                cal.get(Calendar.DAY_OF_MONTH)
+                            ).show()
+                        }
                         .padding(vertical = 2.dp)
                 ) {
                     Icon(
@@ -333,7 +335,9 @@ fun JournalDetailContent(
                         modifier = Modifier.size(13.dp)
                     )
                     Spacer(modifier = Modifier.width(5.dp))
-                    val dateStr = SimpleDateFormat("dd MMMM yyyy", Locale.US).format(Date(timestamp))
+                    val dateStr = remember(timestamp) {
+                        synchronized(detailDateFormatter) { detailDateFormatter.format(Date(timestamp)) }
+                    }
                     Text(
                         text = dateStr,
                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
@@ -494,22 +498,33 @@ fun JournalDetailContent(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 if (carouselStickers.size <= 1) {
+                    val displayFile = File(
+                        if (isStickerMode && entry.stickerImagePath != null) currentStickerPath else entry.fullImagePath
+                    )
+                    var singleStickerCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                    val view = LocalView.current
                     Box(
                         modifier = Modifier
                             .size(165.dp)
+                            .onGloballyPositioned { coords ->
+                                if (coords.isAttached) {
+                                    singleStickerCoords = coords
+                                }
+                            }
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onClick = { showPreview = true }
+                                onClick = {
+                                    thumbnailBounds = singleStickerCoords?.takeIf { it.isAttached }?.boundsOnScreen(view)
+                                    showPreview = true
+                                }
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        val displayFile = File(
-                            if (isStickerMode && entry.stickerImagePath != null) currentStickerPath else entry.fullImagePath
-                        )
                         val imageRequest = remember(displayFile, isStickerMode) {
                             ImageRequest.Builder(context)
                                 .data(displayFile)
+                                .size(500, 500)
                                 .apply {
                                     if (isStickerMode && entry.stickerImagePath != null) {
                                         transformations(CropTransparentTransformation())
@@ -521,10 +536,12 @@ fun JournalDetailContent(
                         AsyncImage(
                             model = imageRequest,
                             contentDescription = title,
-                            modifier = Modifier.fillMaxSize().then(
-                                if (isStickerMode && entry.stickerImagePath != null) Modifier.dieCutStickerEffect()
-                                else Modifier.clip(RoundedCornerShape(18.dp))
-                            ),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(
+                                    if (isStickerMode && entry.stickerImagePath != null) Modifier.dieCutStickerEffect()
+                                    else Modifier.clip(RoundedCornerShape(18.dp))
+                                ),
                             contentScale = if (isStickerMode && entry.stickerImagePath != null) ContentScale.Fit else ContentScale.Crop
                         )
                     }
@@ -533,11 +550,12 @@ fun JournalDetailContent(
                         stickers = carouselStickers,
                         initialIndex = selectedStickerIndex,
                         isStickerMode = isStickerMode,
-                        onStickerClick = {
-                            selectedStickerIndex = it
+                        onStickerClick = { idx, bounds ->
+                            selectedStickerIndex = idx
+                            thumbnailBounds = bounds
                             showPreview = true
                         },
-                        onActiveIndexChange = { selectedStickerIndex = it },
+                        onActiveIndexChange = { if (it != selectedStickerIndex) selectedStickerIndex = it },
                         modifier = Modifier.size(165.dp)
                     )
                 }
@@ -733,10 +751,10 @@ fun JournalDetailContent(
             imageFile = File(tappedPath),
             title = title,
             isSticker = isStickerMode && (entry.stickerImagePath != null || carouselStickers.isNotEmpty()),
+            sourceRect = thumbnailBounds,
             onDismiss = { showPreview = false }
         )
     }
-
     if (isNewTagDialogOpen) {
         NewTagDialog(
             onDismiss = { isNewTagDialogOpen = false },
