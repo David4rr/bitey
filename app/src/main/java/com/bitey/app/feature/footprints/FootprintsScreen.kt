@@ -111,7 +111,7 @@ fun FootprintsScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        AndroidView(factory = { mapView.onResume(); mapView }, update = { it.invalidate() }, modifier = Modifier.fillMaxSize())
+        AndroidView(factory = { mapView.onResume(); mapView }, modifier = Modifier.fillMaxSize())
 
         if (uiState.isNavigating) {
             NavigationTopBanner(currentStep = uiState.currentManeuverStep, modifier = Modifier.align(Alignment.TopCenter))

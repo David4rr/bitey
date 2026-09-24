@@ -81,7 +81,9 @@ class FootprintsViewModel @Inject constructor(
             isLoading = false, navigationTarget = navTarget, activeRoute = route,
             currentStepIndex = _currentStepIndex.value, isNavigating = navTarget != null && route != null
         )
-    }.stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(5000L), initialValue = FootprintsUiState())
+    }
+    .flowOn(Dispatchers.Default)
+    .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(5000L), initialValue = FootprintsUiState())
 
     init {
         fetchDeviceLocation()

@@ -9,12 +9,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -72,8 +72,9 @@ fun ScrapbookCanvas(
         ) {
             val widthPx = with(density) { maxWidth.toPx() }
             val heightPx = with(density) { maxHeight.toPx() }
-            onViewportSizeChanged(widthPx, heightPx)
-
+            LaunchedEffect(widthPx, heightPx) {
+                onViewportSizeChanged(widthPx, heightPx)
+            }
             if (elements.isEmpty()) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -99,8 +100,11 @@ fun ScrapbookCanvas(
                 Box(
                     modifier = Modifier
                         .offset { IntOffset(element.xOffset.roundToInt(), element.yOffset.roundToInt()) }
-                        .rotate(element.rotation)
-                        .scale(element.scale)
+                        .graphicsLayer {
+                            rotationZ = element.rotation
+                            scaleX = element.scale
+                            scaleY = element.scale
+                        }
                         .pointerInput(element.id) { detectTapGestures { onSelectElement(element.id) } }
                         .pointerInput(element.id) {
                             detectTransformGestures { _, pan, zoom, rot ->

@@ -30,6 +30,8 @@ object DishMarkerRenderer {
         val dishBitmap = loadDishBitmap(imagePath, targetSize = 120)
         val secondBitmap = if (count > 1 && !secondaryImagePath.isNullOrBlank()) loadDishBitmap(secondaryImagePath, targetSize = 120) else null
         val markerDrawable = createDishMarkerIcon(context, dishBitmap, secondBitmap, isSticker, count)
+        dishBitmap?.recycle()
+        secondBitmap?.recycle()
         markerIconCache.put(cacheKey, markerDrawable)
         return markerDrawable
     }

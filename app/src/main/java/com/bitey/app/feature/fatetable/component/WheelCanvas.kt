@@ -34,7 +34,7 @@ import kotlin.math.sin
 @Composable
 fun WheelCanvas(
     candidates: List<PlateEntryWithTags>,
-    rotationAngle: Float,
+    rotationAngle: () -> Float,
     winningEntry: PlateEntryWithTags? = null,
     isSpinning: Boolean = false,
     modifier: Modifier = Modifier
@@ -94,18 +94,15 @@ fun WheelCanvas(
                     .build()
             }
 
-            val angleDeg = (rotationAngle + (i * sliceAngle) - 90f)
-            val rad = Math.toRadians(angleDeg.toDouble())
-            val translationXPx = (orbitRadiusPx.toDouble() * cos(rad)).toFloat()
-            val translationYPx = (orbitRadiusPx.toDouble() * sin(rad)).toFloat()
-
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .width(80.dp)
                     .graphicsLayer {
-                        translationX = translationXPx
-                        translationY = translationYPx
+                        val angleDeg = (rotationAngle() + (i * sliceAngle) - 90f)
+                        val rad = Math.toRadians(angleDeg.toDouble())
+                        translationX = (orbitRadiusPx.toDouble() * cos(rad)).toFloat()
+                        translationY = (orbitRadiusPx.toDouble() * sin(rad)).toFloat()
                         scaleX = scale
                         scaleY = scale
                         this.alpha = alpha

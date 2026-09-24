@@ -47,17 +47,17 @@ fun FateTableScreen(
     val rotationAnimatable = remember { Animatable(uiState.currentRotationAngle) }
     var lastHapticSliceIndex by remember { mutableIntStateOf(-1) }
 
-    LaunchedEffect(rotationAnimatable.value) {
-        if (uiState.candidates.isNotEmpty()) {
-            val sliceAngle = 360f / uiState.candidates.size
-            val currentSlice = (rotationAnimatable.value / sliceAngle).toInt()
-            if (currentSlice != lastHapticSliceIndex) {
-                lastHapticSliceIndex = currentSlice
-                if (uiState.isSpinning) {
+    LaunchedEffect(uiState.isSpinning, uiState.candidates.size) {
+        if (!uiState.isSpinning || uiState.candidates.isEmpty()) return@LaunchedEffect
+        val sliceAngle = 360f / uiState.candidates.size
+        snapshotFlow { rotationAnimatable.value }
+            .collect { angle ->
+                val currentSlice = (angle / sliceAngle).toInt()
+                if (currentSlice != lastHapticSliceIndex) {
+                    lastHapticSliceIndex = currentSlice
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 }
             }
-        }
     }
 
     Column(
@@ -97,7 +97,7 @@ fun FateTableScreen(
 
                 WheelCanvas(
                     candidates = uiState.candidates,
-                    rotationAngle = rotationAnimatable.value,
+                    rotationAngle = { rotationAnimatable.value },
                     winningEntry = uiState.winningEntry,
                     isSpinning = uiState.isSpinning,
                     modifier = Modifier.fillMaxSize().padding(8.dp)
