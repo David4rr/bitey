@@ -73,50 +73,42 @@ class StickerPipeline @Inject constructor(
         val bitmap = decodeSampledBitmap(file) ?: return@withContext null
         try {
             val subject = when (style) {
-                StickerStyle.CIRCULAR_BADGE -> fallbackStickerCropper.createCircularSubject(bitmap)
                 StickerStyle.ROUNDED_TILE -> fallbackStickerCropper.createRoundedRectSubject(bitmap)
                 else -> fallbackStickerCropper.createCircularSubject(bitmap)
             }
-            try {
-                stickerCompositor.createDieCutSticker(subject)
-            } finally {
-                subject.recycle()
-            }
-        } finally {
-            bitmap.recycle()
-        }
+            try { stickerCompositor.createDieCutSticker(subject) } finally { subject.recycle() }
+        } finally { bitmap.recycle() }
     }
 
-    suspend fun createSmartCircleSticker(
-        file: File, normCx: Float, normCy: Float, normR: Float
-    ): CompositedSticker? = withContext(Dispatchers.IO) {
+    suspend fun createSmartOutlinedSticker(file: File, normPoints: List<Pair<Float, Float>>): CompositedSticker? = withContext(Dispatchers.IO) {
         val bitmap = decodeSampledBitmap(file) ?: return@withContext null
         try {
-            val cx = (normCx * bitmap.width).toInt().coerceIn(0, bitmap.width)
-            val cy = (normCy * bitmap.height).toInt().coerceIn(0, bitmap.height)
-            val r = (normR * minOf(bitmap.width, bitmap.height)).toInt().coerceIn(16, maxOf(bitmap.width, bitmap.height))
-            val left = (cx - r).coerceAtLeast(0)
-            val top = (cy - r).coerceAtLeast(0)
-            val w = (cx + r).coerceAtMost(bitmap.width) - left
-            val h = (cy + r).coerceAtMost(bitmap.height) - top
-            if (w <= 0 || h <= 0) return@withContext null
-
-            val cropped = Bitmap.createBitmap(bitmap, left, top, w, h)
-            val subject = when (val seg = foodSubjectSegmenter.segment(cropped)) {
+            if (normPoints.size < 3) return@withContext createStickerWithFallback(file)
+            val pts = normPoints.map { android.graphics.PointF(it.first * bitmap.width, it.second * bitmap.height) }
+            val minX = pts.minOf { it.x }.toInt().coerceAtLeast(0)
+            val maxX = pts.maxOf { it.x }.toInt().coerceAtMost(bitmap.width)
+            val minY = pts.minOf { it.y }.toInt().coerceAtLeast(0)
+            val maxY = pts.maxOf { it.y }.toInt().coerceAtMost(bitmap.height)
+            val cropW = (maxX - minX).coerceAtLeast(1)
+            val cropH = (maxY - minY).coerceAtLeast(1)
+            val masked = Bitmap.createBitmap(cropW, cropH, Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(masked)
+            val path = android.graphics.Path().apply {
+                moveTo(pts[0].x - minX, pts[0].y - minY)
+                for (i in 1 until pts.size) lineTo(pts[i].x - minX, pts[i].y - minY)
+                close()
+            }
+            canvas.clipPath(path)
+            canvas.drawBitmap(bitmap, android.graphics.Rect(minX, minY, maxX, maxY), android.graphics.Rect(0, 0, cropW, cropH), null)
+            val subject = when (val seg = foodSubjectSegmenter.segment(masked)) {
                 is SegmentationResult.Success -> seg.foregroundBitmap
-                else -> fallbackStickerCropper.createCircularSubject(cropped)
+                else -> masked
             }
-            if (cropped != bitmap && cropped != subject) cropped.recycle()
-            try {
-                stickerCompositor.createDieCutSticker(subject)
-            } finally {
-                subject.recycle()
+            try { stickerCompositor.createDieCutSticker(subject) } finally {
+                if (subject != masked) subject.recycle()
+                masked.recycle()
             }
-        } catch (e: Exception) {
-            null
-        } finally {
-            bitmap.recycle()
-        }
+        } catch (_: Exception) { null } finally { bitmap.recycle() }
     }
 
     private fun decodeSampledBitmap(file: File, maxDim: Int = 1024): Bitmap? {

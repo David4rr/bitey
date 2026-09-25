@@ -4,12 +4,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCut
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +19,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -32,18 +34,16 @@ import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.core.ui.theme.StickerDieCutWhite
 import java.io.File
-import kotlin.math.max
 
 @Composable
 fun ManualCutDialog(
     imageFilePath: String,
     onDismiss: () -> Unit,
-    onApplyCut: (normCenterX: Float, normCenterY: Float, normRadius: Float) -> Unit
+    onApplyCut: (normPoints: List<Pair<Float, Float>>) -> Unit
 ) {
     val theme = LocalNeumorphicTheme.current
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
-    var circleCenter by remember { mutableStateOf<Offset?>(null) }
-    var circleRadius by remember { mutableFloatStateOf(0f) }
+    var points by remember { mutableStateOf<List<Offset>>(emptyList()) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -60,17 +60,24 @@ fun ManualCutDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(imageVector = Icons.Rounded.ContentCut, contentDescription = null, tint = BiteyOrange, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Smart Circle Cut", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = theme.inkPrimary)
+                        Text(text = "Outline Object", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = theme.inkPrimary)
                     }
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                        Icon(imageVector = Icons.Rounded.Close, contentDescription = "Close", tint = theme.inkSecondary)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (points.isNotEmpty()) {
+                            IconButton(onClick = { points = emptyList() }, modifier = Modifier.size(28.dp)) {
+                                Icon(imageVector = Icons.Rounded.Refresh, contentDescription = "Redraw", tint = theme.inkSecondary)
+                            }
+                        }
+                        IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                            Icon(imageVector = Icons.Rounded.Close, contentDescription = "Close", tint = theme.inkSecondary)
+                        }
                     }
                 }
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Circle or drag over the food object to cut",
+                    text = if (points.isEmpty()) "Trace an outline around the food object" else "Outline traced! Tap Cut to isolate object",
                     style = MaterialTheme.typography.bodySmall,
-                    color = theme.inkSecondary
+                    color = if (points.isEmpty()) theme.inkSecondary else BiteyOrange
                 )
                 Spacer(modifier = Modifier.height(14.dp))
                 Box(
@@ -79,13 +86,7 @@ fun ManualCutDialog(
                         .aspectRatio(1f)
                         .clip(RoundedCornerShape(18.dp))
                         .background(theme.surfaceVariant)
-                        .onSizeChanged {
-                            canvasSize = it
-                            if (circleCenter == null && it.width > 0 && it.height > 0) {
-                                circleCenter = Offset(it.width / 2f, it.height / 2f)
-                                circleRadius = minOf(it.width, it.height) * 0.35f
-                            }
-                        },
+                        .onSizeChanged { canvasSize = it },
                     contentAlignment = Alignment.Center
                 ) {
                     AsyncImage(
@@ -99,42 +100,30 @@ fun ManualCutDialog(
                         modifier = Modifier
                             .fillMaxSize()
                             .pointerInput(canvasSize) {
-                                var dragStart = Offset.Zero
                                 detectDragGestures(
-                                    onDragStart = { start ->
-                                        dragStart = start
-                                        circleCenter = start
-                                        circleRadius = 30f
-                                    },
+                                    onDragStart = { start -> points = listOf(start) },
                                     onDrag = { change, _ ->
                                         change.consume()
-                                        val current = change.position
-                                        val minX = minOf(dragStart.x, current.x)
-                                        val maxX = maxOf(dragStart.x, current.x)
-                                        val minY = minOf(dragStart.y, current.y)
-                                        val maxY = maxOf(dragStart.y, current.y)
-                                        val center = Offset((minX + maxX) / 2f, (minY + maxY) / 2f)
-                                        val radius = max(maxX - minX, maxY - minY) / 2f
-                                        circleCenter = center
-                                        circleRadius = radius.coerceAtLeast(24f)
+                                        points = points + change.position
                                     }
                                 )
                             }
                     ) {
-                        val center = circleCenter ?: Offset(size.width / 2f, size.height / 2f)
-                        val radius = if (circleRadius > 0f) circleRadius else minOf(size.width, size.height) * 0.35f
-
-                        // Scrim path masking out the circle
-                        val scrimPath = Path().apply {
-                            fillType = PathFillType.EvenOdd
-                            addRect(androidx.compose.ui.geometry.Rect(Offset.Zero, size))
-                            addOval(androidx.compose.ui.geometry.Rect(center, radius))
+                        if (points.size >= 2) {
+                            val outlinePath = Path().apply {
+                                moveTo(points[0].x, points[0].y)
+                                for (i in 1 until points.size) lineTo(points[i].x, points[i].y)
+                                close()
+                            }
+                            val scrimPath = Path().apply {
+                                fillType = PathFillType.EvenOdd
+                                addRect(androidx.compose.ui.geometry.Rect(Offset.Zero, size))
+                                addPath(outlinePath)
+                            }
+                            drawPath(scrimPath, color = Color.Black.copy(alpha = 0.52f))
+                            drawPath(outlinePath, color = StickerDieCutWhite, style = Stroke(width = 4.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                            drawPath(outlinePath, color = BiteyOrange, style = Stroke(width = 2.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                         }
-                        drawPath(scrimPath, color = Color.Black.copy(alpha = 0.52f))
-
-                        // Smart circle boundary
-                        drawCircle(color = StickerDieCutWhite, radius = radius + 2f, center = center, style = Stroke(width = 4f))
-                        drawCircle(color = BiteyOrange, radius = radius, center = center, style = Stroke(width = 2.5f))
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -142,13 +131,10 @@ fun ManualCutDialog(
                     onClick = {
                         val w = canvasSize.width.toFloat().coerceAtLeast(1f)
                         val h = canvasSize.height.toFloat().coerceAtLeast(1f)
-                        val center = circleCenter ?: Offset(w / 2f, h / 2f)
-                        val radius = if (circleRadius > 0f) circleRadius else minOf(w, h) * 0.35f
-                        val normCx = (center.x / w).coerceIn(0f, 1f)
-                        val normCy = (center.y / h).coerceIn(0f, 1f)
-                        val normR = (radius / minOf(w, h)).coerceIn(0.05f, 0.9f)
-                        onApplyCut(normCx, normCy, normR)
+                        val normPoints = points.map { Pair((it.x / w).coerceIn(0f, 1f), (it.y / h).coerceIn(0f, 1f)) }
+                        onApplyCut(normPoints)
                     },
+                    enabled = points.size >= 3,
                     colors = ButtonDefaults.buttonColors(containerColor = BiteyOrange, contentColor = StickerDieCutWhite),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth().height(46.dp)

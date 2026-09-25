@@ -139,10 +139,10 @@ class NewEntryViewModel @Inject constructor(
         }
     }
 
-    fun applySmartCircleCut(cx: Float, cy: Float, r: Float) {
+    fun applySmartOutlineCut(normPoints: List<Pair<Float, Float>>) {
         val target = _uiState.value.candidates.firstOrNull { it.isSelected } ?: _uiState.value.candidates.firstOrNull() ?: return
         viewModelScope.launch {
-            val sticker = stickerPipeline.createSmartCircleSticker(File(target.originalFilePath), cx, cy, r) ?: return@launch
+            val sticker = stickerPipeline.createSmartOutlinedSticker(File(target.originalFilePath), normPoints) ?: return@launch
             val updated = target.copy(stickerFilePath = sticker.file.absolutePath)
             _uiState.update { c -> c.copy(candidates = c.candidates.map { if (it.id == target.id) updated else it }, showManualCutDialog = false) }
         }

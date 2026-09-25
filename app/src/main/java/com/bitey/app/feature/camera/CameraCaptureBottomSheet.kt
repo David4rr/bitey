@@ -181,7 +181,7 @@ fun CameraCaptureBottomSheet(
                     ManualCutDialog(
                         imageFilePath = original,
                         onDismiss = { viewModel.dismissManualCutDialog() },
-                        onApplyCut = { cx, cy, r -> viewModel.applySmartCircleCut(cx, cy, r) }
+                        onApplyCut = { normPoints -> viewModel.applySmartOutlineCut(normPoints) }
                     )
                 }
             }
