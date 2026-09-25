@@ -87,6 +87,38 @@ class StickerPipeline @Inject constructor(
         }
     }
 
+    suspend fun createSmartCircleSticker(
+        file: File, normCx: Float, normCy: Float, normR: Float
+    ): CompositedSticker? = withContext(Dispatchers.IO) {
+        val bitmap = decodeSampledBitmap(file) ?: return@withContext null
+        try {
+            val cx = (normCx * bitmap.width).toInt().coerceIn(0, bitmap.width)
+            val cy = (normCy * bitmap.height).toInt().coerceIn(0, bitmap.height)
+            val r = (normR * minOf(bitmap.width, bitmap.height)).toInt().coerceIn(16, maxOf(bitmap.width, bitmap.height))
+            val left = (cx - r).coerceAtLeast(0)
+            val top = (cy - r).coerceAtLeast(0)
+            val w = (cx + r).coerceAtMost(bitmap.width) - left
+            val h = (cy + r).coerceAtMost(bitmap.height) - top
+            if (w <= 0 || h <= 0) return@withContext null
+
+            val cropped = Bitmap.createBitmap(bitmap, left, top, w, h)
+            val subject = when (val seg = foodSubjectSegmenter.segment(cropped)) {
+                is SegmentationResult.Success -> seg.foregroundBitmap
+                else -> fallbackStickerCropper.createCircularSubject(cropped)
+            }
+            if (cropped != bitmap && cropped != subject) cropped.recycle()
+            try {
+                stickerCompositor.createDieCutSticker(subject)
+            } finally {
+                subject.recycle()
+            }
+        } catch (e: Exception) {
+            null
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
     private fun decodeSampledBitmap(file: File, maxDim: Int = 1024): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.absolutePath, bounds)

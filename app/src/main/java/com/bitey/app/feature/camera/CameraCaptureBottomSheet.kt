@@ -51,29 +51,24 @@ fun CameraCaptureBottomSheet(
         )
     }
 
-    fun dismissWithAnimation() {
+    fun dismissWithoutSaving() {
         if (isClosing) return
         isClosing = true
         coroutineScope.launch {
-            animatable.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
-            )
-            if (uiState.step != CaptureFlowStep.REVIEW) {
-                viewModel.resetState()
-            }
+            animatable.animateTo(0f, tween(300, easing = FastOutSlowInEasing))
+            viewModel.resetState()
             onDismissRequest()
         }
     }
 
-    fun handleDismissOrSave() {
+    fun handleExplicitSave() {
         if (isClosing) return
-        if (uiState.step == CaptureFlowStep.REVIEW) {
-            viewModel.saveAllSelectedAndClose {
-                dismissWithAnimation()
+        viewModel.saveAllSelectedAndClose {
+            isClosing = true
+            coroutineScope.launch {
+                animatable.animateTo(0f, tween(300, easing = FastOutSlowInEasing))
+                onDismissRequest()
             }
-        } else {
-            dismissWithAnimation()
         }
     }
 
@@ -82,7 +77,7 @@ fun CameraCaptureBottomSheet(
             if (uiState.showManualCutDialog) {
                 viewModel.dismissManualCutDialog()
             } else {
-                handleDismissOrSave()
+                dismissWithoutSaving()
             }
         }
     }
@@ -140,7 +135,7 @@ fun CameraCaptureBottomSheet(
                         onPhotoModeChange = { viewModel.setPhotoMode(it) },
                         capturedDishes = uiState.capturedDishes,
                         onPhotoCaptured = { viewModel.onPhotoCaptured(it) },
-                        onClose = { handleDismissOrSave() },
+                        onClose = { dismissWithoutSaving() },
                         onPickFromFile = { photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                         onDoneDishByDish = { viewModel.finishDishByDishCapture() },
                         applyStatusBarPadding = true,
@@ -174,7 +169,8 @@ fun CameraCaptureBottomSheet(
                     onUpdateCandidateName = { id, name -> viewModel.updateCandidateLabel(id, name) },
                     onUpdateCandidateMealType = { id, type -> viewModel.updateCandidateMealType(id, type) },
                     onCutItMyselfClick = { viewModel.openManualCutDialog() },
-                    onSaveAndClose = { handleDismissOrSave() },
+                    onClose = { dismissWithoutSaving() },
+                    onSaveAndClose = { handleExplicitSave() },
                     isStickerMode = uiState.isStickerMode,
                     onStickerModeChange = { viewModel.setStickerMode(it) },
                     modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
@@ -185,7 +181,7 @@ fun CameraCaptureBottomSheet(
                     ManualCutDialog(
                         imageFilePath = original,
                         onDismiss = { viewModel.dismissManualCutDialog() },
-                        onApplyCut = { viewModel.applyManualCut(it) }
+                        onApplyCut = { cx, cy, r -> viewModel.applySmartCircleCut(cx, cy, r) }
                     )
                 }
             }

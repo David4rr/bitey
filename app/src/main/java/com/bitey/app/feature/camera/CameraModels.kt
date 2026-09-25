@@ -36,7 +36,7 @@ data class CandidateStickerItem(
     val originalFilePath: String,
     val stickerFilePath: String,
     val isSelected: Boolean = true,
-    val label: String = "Food",
+    val label: String = "",
     val mealType: MealType = MealType.FOOD
 )
 

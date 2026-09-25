@@ -16,7 +16,7 @@ data class NewEntryUiState(
     val processingSourceFile: String? = null,
     val processingStickerFile: String? = null,
     val candidates: List<com.bitey.app.feature.camera.CandidateStickerItem> = emptyList(),
-    val dishName: String = "Food",
+    val dishName: String = "",
     val mealType: com.bitey.app.core.database.model.MealType = com.bitey.app.core.database.model.MealType.FOOD,
     val isStickerMode: Boolean = true,
     val showManualCutDialog: Boolean = false,
