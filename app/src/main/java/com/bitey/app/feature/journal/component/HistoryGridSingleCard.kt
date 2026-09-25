@@ -42,7 +42,7 @@ fun HistoryGridPlateCard(
 
     Box(
         modifier = modifier
-            .fillMaxWidth(0.96f)
+            .fillMaxWidth()
             .fillMaxHeight(0.88f)
             .widthIn(max = 360.dp)
             .clip(bookCoverShape)
@@ -58,7 +58,7 @@ fun HistoryGridPlateCard(
             // Book spine & hinge crease effect on the left edge
             Box(
                 modifier = Modifier
-                    .width(18.dp)
+                    .width(16.dp)
                     .fillMaxHeight()
                     .background(
                         Brush.horizontalGradient(
@@ -76,7 +76,7 @@ fun HistoryGridPlateCard(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .padding(start = 14.dp, end = 16.dp, top = 16.dp, bottom = 18.dp),
+                    .padding(start = 12.dp, end = 14.dp, top = 16.dp, bottom = 18.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 BookCoverPlateHeader(
@@ -95,7 +95,7 @@ fun HistoryGridPlateCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .padding(vertical = 8.dp)
+                        .padding(vertical = 6.dp)
                         .clip(RoundedCornerShape(22.dp))
                         .background(
                             Brush.radialGradient(

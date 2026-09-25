@@ -95,7 +95,7 @@ fun MorphingSearchBar(
     val borderStroke = remember(density) { with(density) { Stroke(width = 1.dp.toPx()) } }
     val cursorBrush = remember { SolidColor(BiteyOrange) }
     val surfaceColor = theme.surface
-
+    val borderColor = theme.border
     Box(
         modifier = modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp, vertical = 6.dp),
         contentAlignment = Alignment.CenterEnd
@@ -135,7 +135,7 @@ fun MorphingSearchBar(
                     if (p > 0.01f) {
                         val cr = CornerRadius(lerp(rCollapsedPx, rExpandedPx, p))
                         drawRoundRect(color = surfaceColor, cornerRadius = cr)
-                        drawRoundRect(color = BiteyOrange.copy(alpha = p), cornerRadius = cr, style = borderStroke)
+                        drawRoundRect(color = borderColor.copy(alpha = p), cornerRadius = cr, style = borderStroke)
                     }
                 }
                 .clickable(enabled = !isSearchActive, interactionSource = interactionSource, indication = null) {
@@ -162,7 +162,7 @@ fun MorphingSearchBar(
                 },
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                    Icon(Icons.Rounded.Search, contentDescription = null, tint = BiteyOrange, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.Search, contentDescription = null, tint = theme.inkSecondary, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     BasicTextField(
                         value = searchQuery,

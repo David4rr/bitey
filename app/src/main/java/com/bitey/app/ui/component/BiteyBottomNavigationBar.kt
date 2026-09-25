@@ -12,24 +12,18 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,9 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.bitey.app.core.navigation.Screen
 import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
@@ -77,7 +69,7 @@ fun BiteyBottomNavigationBar(
                 shape = CircleShape,
                 color = theme.surface,
                 border = BorderStroke(1.dp, theme.border),
-                modifier = Modifier.size(width = 152.dp, height = 48.dp)
+                modifier = Modifier.size(width = 112.dp, height = 48.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -97,9 +89,8 @@ fun BiteyBottomNavigationBar(
                             label = "navIcon"
                         )
 
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
+                        Box(
+                            contentAlignment = Alignment.Center,
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
@@ -113,7 +104,6 @@ fun BiteyBottomNavigationBar(
                                         onNavigateToRoute(screen.route)
                                     }
                                 }
-                                .padding(vertical = 2.dp)
                         ) {
                             val iconScale by animateFloatAsState(
                                 targetValue = if (selected) 1.15f else 1.0f,
@@ -132,7 +122,7 @@ fun BiteyBottomNavigationBar(
                                     contentDescription = screen.title,
                                     tint = animatedIconColor,
                                     modifier = Modifier
-                                        .size(18.dp)
+                                        .size(22.dp)
                                         .graphicsLayer {
                                             scaleX = iconScale
                                             scaleY = iconScale
@@ -145,7 +135,7 @@ fun BiteyBottomNavigationBar(
                                     contentDescription = screen.title,
                                     tint = animatedIconColor,
                                     modifier = Modifier
-                                        .size(18.dp)
+                                        .size(22.dp)
                                         .graphicsLayer {
                                             scaleX = iconScale
                                             scaleY = iconScale
@@ -153,14 +143,6 @@ fun BiteyBottomNavigationBar(
                                         }
                                 )
                             }
-                            Spacer(modifier = Modifier.height(1.dp))
-                            Text(
-                                text = screen.title,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selected) BiteyOrange else theme.inkMuted,
-                                fontSize = 10.sp
-                            )
                         }
                     }
                 }
@@ -195,10 +177,10 @@ fun BiteyBottomNavigationBar(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.CameraAlt,
+                    imageVector = Icons.Rounded.Add,
                     contentDescription = "Capture Food",
                     tint = StickerDieCutWhite,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(26.dp)
                 )
             }
         }
