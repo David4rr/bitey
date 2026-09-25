@@ -21,6 +21,9 @@ import java.util.Date
 import java.util.Locale
 
 import com.bitey.app.feature.journal.JournalPlate
+private val plateDateFormat = SimpleDateFormat("MMMM d, yyyy", Locale.getDefault())
+private val bookCoverShape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 22.dp, bottomEnd = 22.dp)
+private val innerCanvasShape = RoundedCornerShape(22.dp)
 
 @Composable
 fun HistoryGridPlateCard(
@@ -31,10 +34,14 @@ fun HistoryGridPlateCard(
     modifier: Modifier = Modifier
 ) {
     val theme = LocalNeumorphicTheme.current
-    val imageFiles = remember(plate) { plate.allImageFiles }
-    val dateFormat = remember { SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()) }
-    val formattedDate = remember(plate.timestamp) { dateFormat.format(Date(plate.timestamp)) }
-    val bookCoverShape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 22.dp, bottomEnd = 22.dp)
+    val imageFiles = remember(plate.id, plate.entries.size) { plate.allImageFiles }
+    val formattedDate = remember(plate.timestamp) { plateDateFormat.format(Date(plate.timestamp)) }
+    val spineBrush = remember(theme.surfaceVariant, theme.border) {
+        Brush.horizontalGradient(listOf(theme.surfaceVariant.copy(alpha = 0.6f), theme.surfaceVariant.copy(alpha = 0.2f), theme.border.copy(alpha = 0.35f)))
+    }
+    val radialBrush = remember(theme.surfaceVariant, theme.surface) {
+        Brush.radialGradient(colors = listOf(theme.surfaceVariant.copy(alpha = 0.5f), theme.surfaceVariant.copy(alpha = 0.2f), theme.surface.copy(alpha = 0.05f)))
+    }
 
     var isGravityEnabled by remember(plate.id) {
         mutableStateOf(StickerPositionCache.isGravityEnabled(plate.id, default = false))
@@ -60,15 +67,7 @@ fun HistoryGridPlateCard(
                 modifier = Modifier
                     .width(16.dp)
                     .fillMaxHeight()
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                theme.surfaceVariant.copy(alpha = 0.6f),
-                                theme.surfaceVariant.copy(alpha = 0.2f),
-                                theme.border.copy(alpha = 0.35f)
-                            )
-                        )
-                    )
+                    .background(spineBrush)
             )
 
             // Book Cover Front Face
@@ -96,21 +95,9 @@ fun HistoryGridPlateCard(
                         .fillMaxWidth()
                         .weight(1f)
                         .padding(vertical = 6.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(
-                                    theme.surfaceVariant.copy(alpha = 0.5f),
-                                    theme.surfaceVariant.copy(alpha = 0.2f),
-                                    theme.surface.copy(alpha = 0.05f)
-                                )
-                            )
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = theme.border.copy(alpha = 0.4f),
-                            shape = RoundedCornerShape(22.dp)
-                        ),
+                        .clip(innerCanvasShape)
+                        .background(radialBrush)
+                        .border(width = 1.dp, color = theme.border.copy(alpha = 0.4f), shape = innerCanvasShape),
                     contentAlignment = Alignment.Center
                 ) {
                     GravitySticker(

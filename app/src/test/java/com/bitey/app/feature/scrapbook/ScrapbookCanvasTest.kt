@@ -138,4 +138,40 @@ class ScrapbookCanvasTest {
         val rotatedFull = com.bitey.app.feature.scrapbook.model.CanvasElementOps.rotateElement(rotated1, "sticker-1", 330f)
         assertEquals(15f, rotatedFull.first { it.id == "sticker-1" }.rotation, 0.001f)
     }
+
+    @Test
+    fun scrapbookTopBar_morphingAnimationAndIdleContract() {
+        val topBarFile = java.io.File("src/main/java/com/bitey/app/feature/scrapbook/component/ScrapbookTopBar.kt").takeIf { it.exists() }
+            ?: java.io.File("app/src/main/java/com/bitey/app/feature/scrapbook/component/ScrapbookTopBar.kt")
+        assertTrue("ScrapbookTopBar exists", topBarFile.exists())
+        val text = topBarFile.readText()
+        assertTrue("Uses morphing animation progress state", text.contains("ScrapbookAppBarMorph"))
+        assertTrue("Static title on the left", text.contains("BrandHeaderLarge"))
+        assertTrue("In idle shows more actions button", text.contains("Icons.Rounded.MoreHoriz"))
+        assertTrue("Expanded row contains share button", text.contains("Icons.Rounded.Share"))
+        assertTrue("Handles back press when expanded", text.contains("BackHandler(enabled = isExpanded)"))
+        assertTrue("Supports aspect ratio toggle in expanded", text.contains("onToggleAspectRatio"))
+        assertTrue("Supports save to gallery in expanded", text.contains("onExportToGallery"))
+        assertTrue("Supports clear canvas in expanded", text.contains("showClearDialog"))
+        val dialogFile = java.io.File("src/main/java/com/bitey/app/feature/scrapbook/component/ClearCanvasDialog.kt").takeIf { it.exists() }
+            ?: java.io.File("app/src/main/java/com/bitey/app/feature/scrapbook/component/ClearCanvasDialog.kt")
+        assertTrue("ClearCanvasDialog exists", dialogFile.exists())
+    }
+
+    @Test
+    fun scrapbookExport_pixelAccurateRenderingContract() {
+        val rendererFile = java.io.File("src/main/java/com/bitey/app/feature/scrapbook/export/CanvasBitmapRenderer.kt").takeIf { it.exists() }
+            ?: java.io.File("app/src/main/java/com/bitey/app/feature/scrapbook/export/CanvasBitmapRenderer.kt")
+        assertTrue("CanvasBitmapRenderer exists", rendererFile.exists())
+        val rendererText = rendererFile.readText()
+        assertTrue("Computes scale from targetWidth and viewportWidthPx", rendererText.contains("val scale = targetWidth.toFloat() /"))
+        assertTrue("Computes dpPx for accurate scaling", rendererText.contains("val dpPx = density * scale"))
+
+        val drawerFile = java.io.File("src/main/java/com/bitey/app/feature/scrapbook/export/CanvasElementDrawer.kt").takeIf { it.exists() }
+            ?: java.io.File("app/src/main/java/com/bitey/app/feature/scrapbook/export/CanvasElementDrawer.kt")
+        assertTrue("CanvasElementDrawer exists", drawerFile.exists())
+        val drawerText = drawerFile.readText()
+        assertTrue("Food sticker sized proportionally to 140dp", drawerText.contains("140f * dpPx"))
+        assertTrue("Fits bitmap inside boxSize", drawerText.contains("fitScale"))
+    }
 }

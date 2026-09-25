@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.bitey.app.core.image.CropTransparentTransformation
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
 import java.io.File
 
@@ -63,24 +62,38 @@ internal fun ModularStickerItem(
     val targetPhysicsX = if (isGravityEnabled) (tiltX * maxDragX + scatterSpread).coerceIn(-maxDragX, maxDragX) else userOffsetX
     val targetPhysicsY = if (isGravityEnabled) (tiltY * maxDragY).coerceIn(-maxDragY, maxDragY) else userOffsetY
 
-    val physicsX by animateFloatAsState(
-        targetValue = if (isDragging) dragX else targetPhysicsX,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow), label = "px"
-    )
-    val physicsY by animateFloatAsState(
-        targetValue = if (isDragging) dragY else targetPhysicsY,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow), label = "py"
-    )
-    val dragScale by animateFloatAsState(if (isDragging) 1.08f else 1.0f, spring(stiffness = Spring.StiffnessMediumLow), label = "ds")
-    val rotation by animateFloatAsState(
-        targetValue = if (isGravityEnabled) (tiltX * 22f + (index * 6f - 3f)).coerceIn(-30f, 30f) else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow), label = "rot"
-    )
+    val isAnimating = isDragging || isGravityEnabled
+    val physicsX = if (isAnimating) {
+        val animX by animateFloatAsState(
+            targetValue = if (isDragging) dragX else targetPhysicsX,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow), label = "px"
+        )
+        animX
+    } else userOffsetX
 
-    val imageRequest = remember(file, isStickerMode) {
-        ImageRequest.Builder(context).data(file)
-            .apply { if (isStickerMode) transformations(CropTransparentTransformation()) }
-            .size(500, 500).crossfade(false).build()
+    val physicsY = if (isAnimating) {
+        val animY by animateFloatAsState(
+            targetValue = if (isDragging) dragY else targetPhysicsY,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow), label = "py"
+        )
+        animY
+    } else userOffsetY
+
+    val dragScale = if (isDragging) {
+        val scale by animateFloatAsState(1.08f, spring(stiffness = Spring.StiffnessMediumLow), label = "ds")
+        scale
+    } else 1.0f
+
+    val rotation = if (isGravityEnabled) {
+        val rot by animateFloatAsState(
+            targetValue = (tiltX * 22f + (index * 6f - 3f)).coerceIn(-30f, 30f),
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow), label = "rot"
+        )
+        rot
+    } else 0f
+
+    val imageRequest = remember(file) {
+        ImageRequest.Builder(context).data(file).size(500, 500).crossfade(false).build()
     }
 
     Box(

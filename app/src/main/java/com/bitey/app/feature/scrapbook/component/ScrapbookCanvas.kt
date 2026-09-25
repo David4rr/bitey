@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -61,20 +62,20 @@ fun ScrapbookCanvas(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
-        BoxWithConstraints(
+        Box(
             modifier = Modifier
                 .aspectRatio(aspect)
+                .onSizeChanged { size ->
+                    if (size.width > 0 && size.height > 0) {
+                        onViewportSizeChanged(size.width.toFloat(), size.height.toFloat())
+                    }
+                }
                 .minimalistCard(cornerRadius = 24.dp, elevation = 2.dp)
                 .clip(RoundedCornerShape(24.dp))
                 .background(Color(backgroundColorHex))
                 .pointerInput(Unit) { detectTapGestures { onSelectElement(null) } },
             contentAlignment = Alignment.Center
         ) {
-            val widthPx = with(density) { maxWidth.toPx() }
-            val heightPx = with(density) { maxHeight.toPx() }
-            LaunchedEffect(widthPx, heightPx) {
-                onViewportSizeChanged(widthPx, heightPx)
-            }
             if (elements.isEmpty()) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,

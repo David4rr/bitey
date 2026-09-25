@@ -86,6 +86,7 @@ fun JournalScreen(
                             val pagerState = rememberPagerState(pageCount = { uiState.plates.size })
                             HorizontalPager(
                                 state = pagerState,
+                                beyondViewportPageCount = 1,
                                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 64.dp),
                                 pageSpacing = 16.dp,
                                 key = { uiState.plates[it].id },

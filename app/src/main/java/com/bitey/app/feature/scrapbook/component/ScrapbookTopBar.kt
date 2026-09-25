@@ -1,28 +1,36 @@
 package com.bitey.app.feature.scrapbook.component
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.AspectRatio
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import com.bitey.app.core.ui.theme.BiteyOrange
 import com.bitey.app.core.ui.theme.BrandHeaderLarge
 import com.bitey.app.core.ui.theme.LocalNeumorphicTheme
 import com.bitey.app.feature.scrapbook.model.CanvasAspectRatio
+import kotlin.math.roundToInt
 
-/**
- * Minimalist top bar for Scrapbook with consistent actions and overflow menu.
- */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ScrapbookTopBar(
     elementCount: Int,
@@ -36,15 +44,31 @@ fun ScrapbookTopBar(
     modifier: Modifier = Modifier
 ) {
     val theme = LocalNeumorphicTheme.current
-    var showMenu by remember { mutableStateOf(false) }
+    var isExpanded by remember { mutableStateOf(false) }
     var showClearDialog by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+
+    BackHandler(enabled = isExpanded) { isExpanded = false }
+
+    val animProgress by animateFloatAsState(
+        targetValue = if (isExpanded) 1f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "ScrapbookAppBarMorph"
+    )
+
+    val minWPx = remember(density) { with(density) { 42.dp.roundToPx().toFloat() } }
+    val maxWPx = remember(density, elementCount) {
+        with(density) { (if (elementCount > 0) 192.dp else 158.dp).roundToPx().toFloat() }
+    }
+    val buttonHPx = remember(density) { with(density) { 42.dp.toPx() } }
 
     Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .height(56.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -67,95 +91,68 @@ fun ScrapbookTopBar(
             )
         }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        val cr = (21f - 5f * animProgress.coerceIn(0f, 1f)).dp
+        Box(
+            modifier = Modifier
+                .layout { measurable, constraints ->
+                    val w = lerp(minWPx, maxWPx, animProgress).roundToInt()
+                    val h = buttonHPx.roundToInt()
+                    val placeable = measurable.measure(constraints.copy(minWidth = w, maxWidth = w, minHeight = h, maxHeight = h))
+                    layout(w, h) { placeable.place(0, 0) }
+                }
+                .clip(RoundedCornerShape(cr))
+                .background(theme.surface)
+                .border(
+                    width = 1.dp,
+                    color = theme.border.copy(alpha = 0.5f + 0.5f * animProgress),
+                    shape = RoundedCornerShape(cr)
+                )
+                .then(
+                    if (!isExpanded) {
+                        Modifier.combinedClickable(
+                            onClick = { isExpanded = true },
+                            onLongClick = { if (!isExporting && elementCount > 0) onShareStory() }
+                        )
+                    } else Modifier
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            // Primary Share Action
-            IconButton(
-                onClick = onShareStory,
-                modifier = Modifier.size(36.dp),
-                enabled = !isExporting && elementCount > 0
-            ) {
+            if (animProgress < 0.15f && !isExpanded) {
                 Icon(
-                    imageVector = Icons.Rounded.Share,
-                    contentDescription = "Share Story",
+                    imageVector = Icons.Rounded.MoreHoriz,
+                    contentDescription = "Canvas Actions",
                     tint = if (elementCount > 0) BiteyOrange else theme.inkMuted,
                     modifier = Modifier.size(20.dp)
                 )
-            }
-
-            // More Options Overflow Menu
-            Box {
-                IconButton(
-                    onClick = { showMenu = true },
-                    modifier = Modifier.size(36.dp)
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 4.dp)
+                        .graphicsLayer { alpha = ((animProgress - 0.1f) * 1.18f).coerceIn(0f, 1f) },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.MoreVert,
-                        contentDescription = "More Options",
-                        tint = theme.inkPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    containerColor = theme.surface,
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = if (aspectRatio == CanvasAspectRatio.STORY_9_16) "Switch to 1:1 Square" else "Switch to 9:16 Story",
-                                color = theme.inkPrimary
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Rounded.AspectRatio,
-                                contentDescription = null,
-                                tint = theme.inkSecondary
-                            )
-                        },
-                        onClick = {
-                            onToggleAspectRatio()
-                            showMenu = false
-                        }
-                    )
-
-                    DropdownMenuItem(
-                        text = { Text("Save to Gallery", color = if (elementCount > 0) theme.inkPrimary else theme.inkMuted) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Rounded.Download,
-                                contentDescription = null,
-                                tint = if (elementCount > 0) BiteyOrange else theme.inkMuted
-                            )
-                        },
-                        enabled = !isExporting && elementCount > 0,
-                        onClick = {
-                            onExportToGallery()
-                            showMenu = false
-                        }
-                    )
-
+                    IconButton(onClick = onToggleAspectRatio, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Rounded.AspectRatio, contentDescription = "Aspect Ratio", tint = theme.inkSecondary, modifier = Modifier.size(17.dp))
+                    }
+                    IconButton(onClick = onExportToGallery, modifier = Modifier.size(32.dp), enabled = !isExporting && elementCount > 0) {
+                        Icon(Icons.Rounded.Download, contentDescription = "Save to Gallery", tint = if (elementCount > 0) theme.inkPrimary else theme.inkMuted, modifier = Modifier.size(17.dp))
+                    }
                     if (elementCount > 0) {
-                        DropdownMenuItem(
-                            text = { Text("Clear Canvas", color = Color(0xFFE57373)) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Rounded.Delete,
-                                    contentDescription = null,
-                                    tint = Color(0xFFE57373)
-                                )
-                            },
-                            onClick = {
-                                showClearDialog = true
-                                showMenu = false
-                            }
-                        )
+                        IconButton(onClick = { showClearDialog = true }, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Rounded.Delete, contentDescription = "Clear Canvas", tint = Color(0xFFE57373), modifier = Modifier.size(17.dp))
+                        }
+                    }
+                    IconButton(
+                        onClick = { isExpanded = false; onShareStory() },
+                        modifier = Modifier.size(32.dp),
+                        enabled = !isExporting && elementCount > 0
+                    ) {
+                        Icon(Icons.Rounded.Share, contentDescription = "Share Story", tint = if (elementCount > 0) BiteyOrange else theme.inkMuted, modifier = Modifier.size(17.dp))
+                    }
+                    IconButton(onClick = { isExpanded = false }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Rounded.Close, contentDescription = "Close", tint = theme.inkSecondary, modifier = Modifier.size(17.dp))
                     }
                 }
             }
@@ -163,24 +160,9 @@ fun ScrapbookTopBar(
     }
 
     if (showClearDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearDialog = false },
-            title = { Text("Clear Story Canvas", color = theme.inkPrimary) },
-            text = { Text("Remove all stickers and accessories from this canvas?", color = theme.inkSecondary) },
-            confirmButton = {
-                Button(
-                    onClick = { onClearCanvas(); showClearDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE57373))
-                ) { Text("Clear All") }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showClearDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = theme.surfaceVariant, contentColor = theme.inkPrimary)
-                ) { Text("Cancel") }
-            },
-            containerColor = theme.surface,
-            shape = RoundedCornerShape(20.dp)
+        ClearCanvasDialog(
+            onConfirm = { onClearCanvas(); showClearDialog = false },
+            onDismiss = { showClearDialog = false }
         )
     }
 }

@@ -53,9 +53,9 @@ class CanvasBitmapRenderer @Inject constructor(
         canvas.drawRect(0f, 0f, targetWidth.toFloat(), targetHeight.toFloat(), bgPaint)
 
         // Scale factor from preview viewport coordinates to offscreen high-res canvas
-        val scaleX = targetWidth / viewportWidthPx
-        val scaleY = targetHeight / viewportHeightPx
-        val uniformScale = (scaleX + scaleY) / 2f
+        val scale = targetWidth.toFloat() / (if (viewportWidthPx > 0f) viewportWidthPx else 1080f)
+        val density = context.resources.displayMetrics.density
+        val dpPx = density * scale
 
         val centerX = targetWidth / 2f
         val centerY = targetHeight / 2f
@@ -66,34 +66,24 @@ class CanvasBitmapRenderer @Inject constructor(
         for (element in sortedElements) {
             canvas.save()
 
-            val elX = centerX + (element.xOffset * uniformScale)
-            val elY = centerY + (element.yOffset * uniformScale)
+            val elX = centerX + (element.xOffset * scale)
+            val elY = centerY + (element.yOffset * scale)
 
             canvas.translate(elX, elY)
             canvas.rotate(element.rotation)
-            val finalElementScale = element.scale * uniformScale
-            canvas.scale(finalElementScale, finalElementScale)
+            canvas.scale(element.scale, element.scale)
 
             when (element.type) {
-                CanvasElementType.FOOD_STICKER -> CanvasElementDrawer.drawFoodSticker(canvas, element, backgroundColorHex, cherryBombTypeface)
-                CanvasElementType.DATE_STAMP -> CanvasElementDrawer.drawDateStamp(canvas, element)
-                CanvasElementType.WASHI_TAPE -> CanvasElementDrawer.drawWashiTape(canvas, element)
-                CanvasElementType.LOCATION_TAG -> CanvasElementDrawer.drawLocationTag(canvas, element)
-                CanvasElementType.RATING_BADGE -> CanvasElementDrawer.drawRatingBadge(canvas, element)
-                CanvasElementType.MOOD_CHIP -> CanvasElementDrawer.drawMoodChip(canvas, element)
+                CanvasElementType.FOOD_STICKER -> CanvasElementDrawer.drawFoodSticker(canvas, element, dpPx, backgroundColorHex, cherryBombTypeface)
+                CanvasElementType.DATE_STAMP -> CanvasElementDrawer.drawDateStamp(canvas, element, dpPx)
+                CanvasElementType.WASHI_TAPE -> CanvasElementDrawer.drawWashiTape(canvas, element, dpPx)
+                CanvasElementType.LOCATION_TAG -> CanvasElementDrawer.drawLocationTag(canvas, element, dpPx)
+                CanvasElementType.RATING_BADGE -> CanvasElementDrawer.drawRatingBadge(canvas, element, dpPx)
+                CanvasElementType.MOOD_CHIP -> CanvasElementDrawer.drawMoodChip(canvas, element, dpPx)
             }
 
             canvas.restore()
         }
-
-        // Bottom subtle brand stamp
-        val watermarkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0x554A3E3D
-            textSize = 28f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            textAlign = Paint.Align.CENTER
-        }
-        canvas.drawText("bitey • food scrapbook", targetWidth / 2f, targetHeight - 40f, watermarkPaint)
 
         bitmap
     }
