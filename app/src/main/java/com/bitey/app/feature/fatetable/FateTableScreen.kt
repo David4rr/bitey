@@ -72,11 +72,23 @@ fun FateTableScreen(
             candidateCount = uiState.candidates.size,
             isSpinning = uiState.isSpinning,
             onShuffle = { viewModel.shuffleCandidates() },
+            onOpenMenuPicker = { viewModel.openMenuPicker(true) },
+            isCustomSelection = uiState.isCustomSelection,
             onNavigateBack = onNavigateBack
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
+        if (uiState.candidates.isNotEmpty()) {
+            ActiveMenuChipsRow(
+                candidates = uiState.candidates,
+                isSpinning = uiState.isSpinning,
+                onRemoveCandidate = { viewModel.removeCandidate(it) },
+                onAddMenuClick = { viewModel.openMenuPicker(true) },
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
         if (uiState.candidates.size < 2) {
             InsufficientCandidatesPrompt(
                 totalEntriesCount = uiState.totalEntriesCount,
@@ -84,7 +96,8 @@ fun FateTableScreen(
                 onResetFilters = {
                     viewModel.selectFilter(FateSourceFilter.ALL)
                     viewModel.selectTag(null)
-                }
+                },
+                onChooseMenuClick = { viewModel.openMenuPicker(true) }
             )
         } else {
             Box(
@@ -155,6 +168,17 @@ fun FateTableScreen(
             onNavigate = {
                 onNavigateToFootprints(winningId)
             }
+        )
+    }
+
+    if (uiState.showMenuPicker) {
+        FateTableMenuPickerSheet(
+            allEntries = uiState.allEntries,
+            selectedCandidates = uiState.candidates,
+            onToggleEntry = { viewModel.toggleCandidate(it) },
+            onAddCustomMenu = { viewModel.addCustomMenu(it) },
+            onResetToAuto = { viewModel.resetToAutoCandidates() },
+            onDismiss = { viewModel.openMenuPicker(false) }
         )
     }
 }

@@ -3,7 +3,12 @@ package com.bitey.app.feature.fatetable.component
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -11,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -79,19 +85,20 @@ fun WheelCanvas(
 
             val stickerPath = candidate.entry.stickerImagePath?.takeIf { File(it).exists() }
                 ?: candidate.entry.getAllStickerPaths().firstOrNull { File(it).exists() }
-                ?: candidate.entry.fullImagePath
-
-            val isSticker = candidate.entry.isStickerMode || stickerPath != candidate.entry.fullImagePath
+                ?: candidate.entry.fullImagePath.takeIf { it.isNotBlank() && File(it).exists() }
+            val isSticker = candidate.entry.isStickerMode || (stickerPath != null && stickerPath != candidate.entry.fullImagePath)
             val imageRequest = remember(stickerPath, isSticker) {
-                ImageRequest.Builder(context)
-                    .data(File(stickerPath))
-                    .apply {
-                        if (isSticker) {
-                            transformations(CropTransparentTransformation())
+                if (stickerPath != null) {
+                    ImageRequest.Builder(context)
+                        .data(File(stickerPath))
+                        .apply {
+                            if (isSticker) {
+                                transformations(CropTransparentTransformation())
+                            }
                         }
-                    }
-                    .crossfade(true)
-                    .build()
+                        .crossfade(true)
+                        .build()
+                } else null
             }
 
             Column(
@@ -114,21 +121,37 @@ fun WheelCanvas(
                         .aspectRatio(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    AsyncImage(
-                        model = imageRequest,
-                        contentDescription = candidate.entry.title,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .then(
-                                if (isSticker) Modifier.dieCutStickerEffect()
-                                else Modifier
-                            ),
-                        contentScale = ContentScale.Fit
-                    )
+                    if (stickerPath != null && imageRequest != null) {
+                        AsyncImage(
+                            model = imageRequest,
+                            contentDescription = candidate.entry.title,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(
+                                    if (isSticker) Modifier.dieCutStickerEffect()
+                                    else Modifier
+                                ),
+                            contentScale = ContentScale.Fit
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize(0.85f)
+                                .clip(CircleShape)
+                                .background(BiteyOrange.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Restaurant,
+                                contentDescription = candidate.entry.title,
+                                tint = BiteyOrange,
+                                modifier = Modifier.size(if (sliceCount >= 7) 20.dp else 24.dp)
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
-
                 Text(
                     text = candidate.entry.title,
                     style = MaterialTheme.typography.labelSmall.copy(

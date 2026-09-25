@@ -4,6 +4,7 @@ import com.bitey.app.core.database.model.MealType
 import com.bitey.app.core.database.model.PlateEntryEntity
 import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.database.model.TagEntity
+import com.bitey.app.feature.fatetable.component.FateTableUtils
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -157,5 +158,61 @@ class FateTableCalculationTest {
         val sheetFile = File("src/main/java/com/bitey/app/feature/fatetable/component/WinningDishBottomSheet.kt").takeIf { it.exists() }
             ?: File("app/src/main/java/com/bitey/app/feature/fatetable/component/WinningDishBottomSheet.kt")
         assertTrue("WinningDishBottomSheet exists", sheetFile.exists())
+    }
+
+    @Test
+    fun fateTableUtils_calculateSpinTarget_behavesCorrectly() {
+        assertNull(FateTableUtils.calculateSpinTarget(emptyList(), 0f))
+        assertNull(FateTableUtils.calculateSpinTarget(listOf(entry1), 0f))
+        assertNull(FateTableUtils.calculateSpinTarget(listOf(entry1, entry2), 0f, isSpinning = true))
+
+        val result = FateTableUtils.calculateSpinTarget(listOf(entry1, entry2), 0f, isSpinning = false)
+        assertNotNull(result)
+        assertTrue(result!!.targetAngle >= 1800f)
+        assertTrue(result.winningIndex in 0..1)
+    }
+
+    @Test
+    fun fateTableUtils_filterCandidates_matchesCriteria() {
+        val favs = FateTableUtils.filterCandidates(allCandidates, FateSourceFilter.FAVORITES, null)
+        assertEquals(2, favs.size)
+        assertTrue(favs.all { it.entry.isFavorite })
+
+        val recent = FateTableUtils.filterCandidates(allCandidates, FateSourceFilter.RECENT_30_DAYS, null)
+        assertEquals(2, recent.size)
+
+        val tagged = FateTableUtils.filterCandidates(allCandidates, FateSourceFilter.ALL, 1L)
+        assertEquals(1, tagged.size)
+        assertEquals("Ayam Geprek", tagged.first().entry.title)
+    }
+
+    @Test
+    fun fateTableMenuSelection_userCanFreelyChooseMenuContract() {
+        val vmFile = File("src/main/java/com/bitey/app/feature/fatetable/FateTableViewModel.kt").takeIf { it.exists() }
+            ?: File("app/src/main/java/com/bitey/app/feature/fatetable/FateTableViewModel.kt")
+        assertTrue("FateTableViewModel exists", vmFile.exists())
+        val vmText = vmFile.readText()
+
+        assertTrue("ViewModel supports addCandidate", vmText.contains("fun addCandidate"))
+        assertTrue("ViewModel supports addCustomMenu", vmText.contains("fun addCustomMenu"))
+        assertTrue("ViewModel supports removeCandidate", vmText.contains("fun removeCandidate"))
+        assertTrue("ViewModel supports toggleCandidate", vmText.contains("fun toggleCandidate"))
+        assertTrue("ViewModel supports resetToAutoCandidates", vmText.contains("fun resetToAutoCandidates"))
+
+        val pickerFile = File("src/main/java/com/bitey/app/feature/fatetable/component/FateTableMenuPickerSheet.kt").takeIf { it.exists() }
+            ?: File("app/src/main/java/com/bitey/app/feature/fatetable/component/FateTableMenuPickerSheet.kt")
+        assertTrue("FateTableMenuPickerSheet exists", pickerFile.exists())
+        val pickerText = pickerFile.readText()
+
+        assertTrue("Allows adding custom dish by name", pickerText.contains("onAddCustomMenu"))
+        assertTrue("Allows picking from journal entries", pickerText.contains("onToggleEntry"))
+        assertTrue("Allows reset to auto recommendation", pickerText.contains("onResetToAuto"))
+
+        val chipsFile = File("src/main/java/com/bitey/app/feature/fatetable/component/ActiveMenuChipsRow.kt").takeIf { it.exists() }
+            ?: File("app/src/main/java/com/bitey/app/feature/fatetable/component/ActiveMenuChipsRow.kt")
+        assertTrue("ActiveMenuChipsRow exists", chipsFile.exists())
+        val chipsText = chipsFile.readText()
+        assertTrue("Row allows removing candidates", chipsText.contains("onRemoveCandidate"))
+        assertTrue("Row allows opening menu picker", chipsText.contains("onAddMenuClick"))
     }
 }

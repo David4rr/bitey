@@ -27,7 +27,8 @@ import com.bitey.app.core.ui.theme.StickerDieCutWhite
 fun InsufficientCandidatesPrompt(
     totalEntriesCount: Int,
     onCaptureClick: () -> Unit,
-    onResetFilters: () -> Unit
+    onResetFilters: () -> Unit,
+    onChooseMenuClick: () -> Unit = {}
 ) {
     val theme = LocalNeumorphicTheme.current
     Box(
@@ -70,9 +71,9 @@ fun InsufficientCandidatesPrompt(
 
             Text(
                 text = if (totalEntriesCount < 2) {
-                    "Record at least 2 meals in your journal to unlock Fate's Table and spin for your next meal."
+                    "Add dishes to the wheel freely, or record meals in your journal to spin for your next bite."
                 } else {
-                    "The current filter has fewer than 2 candidates. Switch to 'All Recorded' or clear tag filters."
+                    "Fewer than 2 candidates available. Add custom menus or reset filters."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = theme.inkSecondary,
@@ -81,31 +82,24 @@ fun InsufficientCandidatesPrompt(
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            if (totalEntriesCount < 2) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Button(
-                    onClick = onCaptureClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BiteyOrange,
-                        contentColor = StickerDieCutWhite
-                    ),
+                    onClick = onChooseMenuClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = BiteyOrange),
                     shape = RoundedCornerShape(14.dp)
                 ) {
-                    Icon(imageVector = Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(imageVector = Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp), tint = StickerDieCutWhite)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Record a Bite")
+                    Text("Add Menu", color = StickerDieCutWhite, fontWeight = FontWeight.Bold)
                 }
-            } else {
-                Button(
-                    onClick = onResetFilters,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BiteyOrange,
-                        contentColor = StickerDieCutWhite
-                    ),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Icon(imageVector = Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Reset Filters")
+                if (totalEntriesCount < 2) {
+                    OutlinedButton(onClick = onCaptureClick, shape = RoundedCornerShape(14.dp)) {
+                        Text("Record Bite", color = BiteyOrange)
+                    }
+                } else {
+                    OutlinedButton(onClick = onResetFilters, shape = RoundedCornerShape(14.dp)) {
+                        Text("Reset", color = BiteyOrange)
+                    }
                 }
             }
         }

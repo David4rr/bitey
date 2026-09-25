@@ -4,20 +4,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bitey.app.core.database.dao.PlateEntryDao
 import com.bitey.app.core.database.dao.TagDao
+import com.bitey.app.core.database.model.MealType
+import com.bitey.app.core.database.model.PlateEntryEntity
 import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.database.model.TagEntity
+import com.bitey.app.feature.fatetable.component.FateTableUtils
+import com.bitey.app.feature.fatetable.component.SpinResult
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 import kotlin.random.Random
 
 private const val MAX_WHEEL_CANDIDATES = 8
-private const val THIRTY_DAYS_MS = 30L * 24 * 60 * 60 * 1000
 
 @HiltViewModel
 class FateTableViewModel @Inject constructor(
@@ -28,6 +26,8 @@ class FateTableViewModel @Inject constructor(
     private val _selectedFilter = MutableStateFlow(FateSourceFilter.ALL)
     private val _selectedTagId = MutableStateFlow<Long?>(null)
     private val _shuffleSeed = MutableStateFlow(0)
+    private val _manualCandidates = MutableStateFlow<List<PlateEntryWithTags>?>(null)
+    private val _showMenuPicker = MutableStateFlow(false)
     private val _isSpinning = MutableStateFlow(false)
     private val _winningEntry = MutableStateFlow<PlateEntryWithTags?>(null)
     private val _showWinningDialog = MutableStateFlow(false)
@@ -36,21 +36,20 @@ class FateTableViewModel @Inject constructor(
     private data class FilterParams(
         val filter: FateSourceFilter,
         val tagId: Long?,
-        val shuffleSeed: Int
+        val seed: Int,
+        val manual: List<PlateEntryWithTags>?,
+        val showPicker: Boolean
     )
 
-    private val filterParams = combine(
-        _selectedFilter,
-        _selectedTagId,
-        _shuffleSeed
-    ) { filter, tagId, seed ->
-        FilterParams(filter, tagId, seed)
+    private val combinedParams = combine(
+        _selectedFilter, _selectedTagId, _shuffleSeed, _manualCandidates, _showMenuPicker
+    ) { filter, tagId, seed, manual, picker ->
+        FilterParams(filter, tagId, seed, manual, picker)
     }
-
     val uiState: StateFlow<FateTableUiState> = combine(
         plateEntryDao.getAllEntriesWithTags(),
         tagDao.getAllTags(),
-        filterParams,
+        combinedParams,
         _isSpinning,
         _winningEntry,
         _showWinningDialog,
@@ -66,27 +65,20 @@ class FateTableViewModel @Inject constructor(
         val showWinningDialog = args[5] as Boolean
         val currentRotationAngle = args[6] as Float
 
-        val now = System.currentTimeMillis()
-        val filtered = allEntries.filter { item ->
-            val matchesFilter = when (params.filter) {
-                FateSourceFilter.ALL -> true
-                FateSourceFilter.FAVORITES -> item.entry.isFavorite
-                FateSourceFilter.RECENT_30_DAYS -> (now - item.entry.timestamp) <= THIRTY_DAYS_MS
-            }
-            val matchesTag = params.tagId == null || item.tags.any { it.tagId == params.tagId }
-            matchesFilter && matchesTag
-        }
-
-        // Shuffle if candidates exceed max limit, or pick top items
-        val candidates = if (filtered.size > MAX_WHEEL_CANDIDATES) {
-            val random = Random(params.shuffleSeed)
-            filtered.shuffled(random).take(MAX_WHEEL_CANDIDATES)
+        val candidates = if (params.manual != null) {
+            params.manual
         } else {
-            filtered
+            val filtered = FateTableUtils.filterCandidates(allEntries, params.filter, params.tagId)
+            if (filtered.size > MAX_WHEEL_CANDIDATES) {
+                filtered.shuffled(Random(params.seed)).take(MAX_WHEEL_CANDIDATES)
+            } else {
+                filtered
+            }
         }
 
         FateTableUiState(
             candidates = candidates,
+            allEntries = allEntries,
             totalEntriesCount = allEntries.size,
             selectedFilter = params.filter,
             selectedTagId = params.tagId,
@@ -94,58 +86,83 @@ class FateTableViewModel @Inject constructor(
             isSpinning = isSpinning,
             winningEntry = winningEntry,
             showWinningDialog = showWinningDialog,
-            currentRotationAngle = currentRotationAngle
+            currentRotationAngle = currentRotationAngle,
+            isCustomSelection = params.manual != null,
+            showMenuPicker = params.showPicker
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000L),
-        initialValue = FateTableUiState()
-    )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), FateTableUiState())
 
     fun selectFilter(filter: FateSourceFilter) {
         if (_isSpinning.value) return
         _selectedFilter.value = filter
+        _manualCandidates.value = null
     }
 
     fun selectTag(tagId: Long?) {
         if (_isSpinning.value) return
         _selectedTagId.value = if (_selectedTagId.value == tagId) null else tagId
+        _manualCandidates.value = null
     }
 
     fun shuffleCandidates() {
         if (_isSpinning.value) return
-        _shuffleSeed.update { it + 1 }
+        if (_manualCandidates.value != null) {
+            _manualCandidates.update { it?.shuffled() }
+        } else {
+            _shuffleSeed.update { it + 1 }
+        }
     }
 
-    /**
-     * Calculates the target rotation angle and winning item index.
-     * The pointer is at 12 o'clock (top center).
-     */
-    fun calculateSpinTarget(candidates: List<PlateEntryWithTags>): SpinResult? {
-        if (candidates.size < 2 || _isSpinning.value) return null
+    fun openMenuPicker(open: Boolean) {
+        if (_isSpinning.value) return
+        _showMenuPicker.value = open
+    }
 
-        val n = candidates.size
-        val sliceAngle = 360f / n
-        val winningIndex = Random.nextInt(n)
+    fun addCandidate(entry: PlateEntryWithTags) {
+        if (_isSpinning.value) return
+        val current = _manualCandidates.value ?: uiState.value.candidates
+        if (current.any { it.entry.id == entry.entry.id } || current.size >= 12) return
+        _manualCandidates.value = current + entry
+    }
 
-        // Center of winning slice from slice start
-        val sliceCenter = sliceAngle * (winningIndex + 0.5f)
-        val targetMod = (360f - sliceCenter + 360f) % 360f
-
-        val currentAngle = _currentRotationAngle.value
-        val currentMod = (currentAngle % 360f + 360f) % 360f
-        val diff = (targetMod - currentMod + 360f) % 360f
-
-        // 5 to 7 full rotations for deceleration duration
-        val fullSpins = Random.nextInt(5, 8)
-        val totalTargetAngle = currentAngle + (fullSpins * 360f) + diff
-
-        return SpinResult(
-            targetAngle = totalTargetAngle,
-            winningIndex = winningIndex,
-            winningEntry = candidates[winningIndex]
+    fun addCustomMenu(title: String) {
+        val clean = title.trim()
+        if (_isSpinning.value || clean.isBlank()) return
+        val current = _manualCandidates.value ?: uiState.value.candidates
+        if (current.size >= 12) return
+        val custom = PlateEntryWithTags(
+            entry = PlateEntryEntity(
+                id = -System.currentTimeMillis() - Random.nextInt(1000),
+                title = clean, fullImagePath = "", thumbnailPath = "",
+                isStickerMode = false, mealType = MealType.FOOD
+            ),
+            tags = emptyList()
         )
+        _manualCandidates.value = current + custom
     }
+    fun removeCandidate(entryId: Long) {
+        if (_isSpinning.value) return
+        val current = _manualCandidates.value ?: uiState.value.candidates
+        _manualCandidates.value = current.filterNot { it.entry.id == entryId }
+    }
+
+    fun toggleCandidate(entry: PlateEntryWithTags) {
+        if (_isSpinning.value) return
+        val current = _manualCandidates.value ?: uiState.value.candidates
+        if (current.any { it.entry.id == entry.entry.id }) {
+            removeCandidate(entry.entry.id)
+        } else {
+            addCandidate(entry)
+        }
+    }
+
+    fun resetToAutoCandidates() {
+        if (_isSpinning.value) return
+        _manualCandidates.value = null
+    }
+
+    fun calculateSpinTarget(candidates: List<PlateEntryWithTags>): SpinResult? =
+        FateTableUtils.calculateSpinTarget(candidates, _currentRotationAngle.value, _isSpinning.value)
 
     fun onSpinStarted() {
         _isSpinning.value = true
@@ -164,9 +181,3 @@ class FateTableViewModel @Inject constructor(
         _showWinningDialog.value = false
     }
 }
-
-data class SpinResult(
-    val targetAngle: Float,
-    val winningIndex: Int,
-    val winningEntry: PlateEntryWithTags
-)

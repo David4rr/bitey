@@ -11,6 +11,7 @@ enum class FateSourceFilter {
 
 data class FateTableUiState(
     val candidates: List<PlateEntryWithTags> = emptyList(),
+    val allEntries: List<PlateEntryWithTags> = emptyList(),
     val totalEntriesCount: Int = 0,
     val selectedFilter: FateSourceFilter = FateSourceFilter.ALL,
     val selectedTagId: Long? = null,
@@ -18,5 +19,7 @@ data class FateTableUiState(
     val isSpinning: Boolean = false,
     val winningEntry: PlateEntryWithTags? = null,
     val showWinningDialog: Boolean = false,
-    val currentRotationAngle: Float = 0f
+    val currentRotationAngle: Float = 0f,
+    val isCustomSelection: Boolean = false,
+    val showMenuPicker: Boolean = false
 )
