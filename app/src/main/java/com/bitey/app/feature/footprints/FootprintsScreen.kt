@@ -74,7 +74,9 @@ fun FootprintsScreen(
                 val p = spot.primaryEntry
                 val s = spot.entries.getOrNull(1)
                 fun getImg(e: PlateEntryWithTags?) = e?.let { if (it.entry.isStickerMode && !it.entry.stickerImagePath.isNullOrBlank()) it.entry.stickerImagePath else it.entry.thumbnailPath.ifBlank { it.entry.fullImagePath } }
-                val icon = DishMarkerRenderer.getOrCreateDishMarkerIcon(context, getImg(p), getImg(s), p.entry.isStickerMode, spot.entries.size)
+                val pStk = p.entry.isStickerMode && !p.entry.stickerImagePath.isNullOrBlank()
+                val sStk = s?.let { it.entry.isStickerMode && !it.entry.stickerImagePath.isNullOrBlank() } ?: false
+                val icon = DishMarkerRenderer.getOrCreateDishMarkerIcon(context, getImg(p), getImg(s), pStk, sStk, spot.entries.size)
                 Triple(spot, GeoPoint(spot.latitude, spot.longitude), icon)
             }
         }
@@ -169,19 +171,19 @@ fun FootprintsScreen(
                                         item = dish,
                                         onClose = { viewModel.clearSelection() },
                                         onToggleFavorite = { viewModel.toggleFavorite(dish.entry) },
-                                        onNavigate = { viewModel.startNavigation(dish) },
-                                        modifier = Modifier.width(320.dp)
+                                        onNavigate = { viewModel.startNavigation(dish) }
                                     )
                                 }
                             }
                         } else {
-                            MarkerPreviewCard(
-                                item = spot.primaryEntry,
-                                onClose = { viewModel.clearSelection() },
-                                onToggleFavorite = { viewModel.toggleFavorite(spot.primaryEntry.entry) },
-                                onNavigate = { viewModel.startNavigation(spot.primaryEntry) },
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
-                            )
+                            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+                                MarkerPreviewCard(
+                                    item = spot.primaryEntry,
+                                    onClose = { viewModel.clearSelection() },
+                                    onToggleFavorite = { viewModel.toggleFavorite(spot.primaryEntry.entry) },
+                                    onNavigate = { viewModel.startNavigation(spot.primaryEntry) }
+                                )
+                            }
                         }
                     }
                 }

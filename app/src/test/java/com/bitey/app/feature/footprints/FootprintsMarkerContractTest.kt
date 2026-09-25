@@ -59,6 +59,26 @@ class FootprintsMarkerContractTest {
             "DishMarkerRenderer provides cache clear method",
             rendererText.contains("fun clearCache()")
         )
+        assertTrue(
+            "DishMarkerRenderer renders stacked graphics when count > 1",
+            rendererText.contains("if (count > 1)") && rendererText.contains("drawSticker")
+        )
+        assertTrue(
+            "DishMarkerRenderer supports aspect fit for secondary sticker",
+            rendererText.contains("isSecondarySticker") && rendererText.contains("min(maxDim / bW")
+        )
+        assertTrue(
+            "DishMarkerRenderer renders dish count badge when count > 1",
+            rendererText.contains("val badgeX = cx + r + 2f") && rendererText.contains("count.toString()")
+        )
+        assertFalse(
+            "DishMarkerRenderer does not stack external marker circles outside the single pin",
+            rendererText.contains("val backCx = cx")
+        )
+        assertTrue(
+            "DishMarkerRenderer renders overlapping sticker with die-cut outline and alpha visibility",
+            rendererText.contains("dieCutRect") && rendererText.contains("this.alpha = alpha")
+        )
     }
 
     @Test
@@ -144,6 +164,31 @@ class FootprintsMarkerContractTest {
         assertTrue(
             "FootprintsViewModel auto-resolves missing dish locations so existing dishes appear on map",
             vmText.contains("autoResolveMissingLocations")
+        )
+    }
+
+    @Test
+    fun markerPreviewCard_consistentDimensionsAndFallbackContract() {
+        val cardFile = File("src/main/java/com/bitey/app/feature/footprints/component/MarkerPreviewCard.kt").takeIf { it.exists() }
+            ?: File("app/src/main/java/com/bitey/app/feature/footprints/component/MarkerPreviewCard.kt")
+        assertTrue("MarkerPreviewCard exists", cardFile.exists())
+        val cardText = cardFile.readText()
+
+        assertTrue(
+            "MarkerPreviewCard enforces consistent 320dp width",
+            cardText.contains("width(320.dp)")
+        )
+        assertTrue(
+            "MarkerPreviewCard enforces consistent 204dp height",
+            cardText.contains("height(204.dp)")
+        )
+        assertTrue(
+            "MarkerPreviewCard has fallback location for undetailed dish",
+            cardText.contains("Location not detailed yet")
+        )
+        assertTrue(
+            "MarkerPreviewCard has fallback title for undetailed dish",
+            cardText.contains("entry.title.ifBlank")
         )
     }
 }

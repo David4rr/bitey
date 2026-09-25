@@ -47,11 +47,15 @@ fun MarkerPreviewCard(
 
     Box(
         modifier = modifier
-            .fillMaxWidth()
+            .width(320.dp)
+            .height(204.dp)
             .minimalistCard(cornerRadius = 12.dp, elevation = 0.dp)
             .padding(16.dp)
     ) {
-        Column {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -81,7 +85,7 @@ fun MarkerPreviewCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = entry.title,
+                        text = entry.title.ifBlank { entry.mealType.label },
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = theme.inkPrimary,
                         maxLines = 1,
@@ -109,14 +113,13 @@ fun MarkerPreviewCard(
                             style = MaterialTheme.typography.labelSmall,
                             color = theme.inkPrimary
                         )
-                        entry.price?.let { price ->
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "${entry.currency} ${price.toInt()}",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                color = BiteyMint
-                            )
-                        }
+                        val priceText = entry.price?.let { "${entry.currency} ${it.toInt()}" } ?: "Price unlisted"
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = priceText,
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = if (entry.price != null) BiteyMint else theme.inkMuted
+                        )
                     }
                 }
 
@@ -141,29 +144,23 @@ fun MarkerPreviewCard(
                     )
                 }
             }
-
-            entry.locationName?.let { loc ->
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Rounded.LocationOn,
-                        contentDescription = null,
-                        tint = BiteyOrange,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = loc,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = theme.inkSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+            val displayLoc = entry.locationName?.takeIf { it.isNotBlank() } ?: "Location not detailed yet"
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Rounded.LocationOn,
+                    contentDescription = null,
+                    tint = if (entry.locationName.isNullOrBlank()) theme.inkMuted.copy(alpha = 0.5f) else BiteyOrange,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = displayLoc,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (entry.locationName.isNullOrBlank()) theme.inkMuted else theme.inkSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
             Button(
                 onClick = onNavigate,
                 colors = ButtonDefaults.buttonColors(containerColor = BiteyOrange),

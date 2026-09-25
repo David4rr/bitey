@@ -90,20 +90,22 @@ class FootprintsViewModel @Inject constructor(
         autoResolveMissingLocations()
     }
 
-    private fun clusterSpots(entries: List<PlateEntryWithTags>): List<FootprintSpot> {
-        val list = mutableListOf<FootprintSpot>()
-        for (item in entries) {
-            val lat = item.entry.latitude ?: continue
-            val lng = item.entry.longitude ?: continue
-            val idx = list.indexOfFirst { abs(it.latitude - lat) < 0.0003 && abs(it.longitude - lng) < 0.0003 }
-            if (idx != -1) {
-                list[idx] = list[idx].copy(entries = list[idx].entries + item)
-            } else {
-                val id = "spot_${(lat * 10000).toInt()}_${(lng * 10000).toInt()}"
-                list.add(FootprintSpot(id, lat, lng, item.entry.locationName, listOf(item)))
+    companion object {
+        fun clusterSpots(entries: List<PlateEntryWithTags>): List<FootprintSpot> {
+            val list = mutableListOf<FootprintSpot>()
+            for (item in entries) {
+                val lat = item.entry.latitude ?: continue
+                val lng = item.entry.longitude ?: continue
+                val idx = list.indexOfFirst { abs(it.latitude - lat) < 0.0003 && abs(it.longitude - lng) < 0.0003 }
+                if (idx != -1) {
+                    list[idx] = list[idx].copy(entries = list[idx].entries + item)
+                } else {
+                    val id = "spot_${(lat * 10000).toInt()}_${(lng * 10000).toInt()}"
+                    list.add(FootprintSpot(id, lat, lng, item.entry.locationName, listOf(item)))
+                }
             }
+            return list
         }
-        return list
     }
 
     fun hasLocationPermission(): Boolean = locationProvider.hasLocationPermission()
