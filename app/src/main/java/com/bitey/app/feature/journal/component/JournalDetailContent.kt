@@ -232,7 +232,7 @@ fun JournalDetailContent(
                                     modifier = Modifier.size(24.dp)
                                 ) {
                                     Icon(
-                                        painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_check),
+                                        imageVector = Icons.Rounded.Check,
                                         contentDescription = "Save Title",
                                         tint = BiteyOrange,
                                         modifier = Modifier.size(18.dp)
@@ -256,7 +256,7 @@ fun JournalDetailContent(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Icon(
-                                    painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_edit),
+                                    imageVector = Icons.Rounded.Edit,
                                     contentDescription = "Edit Title",
                                     tint = theme.inkMuted.copy(alpha = 0.5f),
                                     modifier = Modifier.size(13.dp)
@@ -287,7 +287,7 @@ fun JournalDetailContent(
                     for (i in 1..5) {
                         val isFilled = rating >= i.toFloat()
                         Icon(
-                            painter = if (isFilled) androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_star_filled) else androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_star_border),
+                            imageVector = if (isFilled) Icons.Rounded.Star else Icons.Rounded.StarBorder,
                             contentDescription = "Rate $i",
                             tint = if (isFilled) BiteyWarmYellow else theme.inkMuted.copy(alpha = 0.35f),
                             modifier = Modifier
@@ -329,7 +329,7 @@ fun JournalDetailContent(
                         .padding(vertical = 2.dp)
                 ) {
                     Icon(
-                        painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_calendar_today),
+                        imageVector = Icons.Rounded.CalendarToday,
                         contentDescription = "Change Date",
                         tint = theme.inkSecondary,
                         modifier = Modifier.size(13.dp)
@@ -357,7 +357,7 @@ fun JournalDetailContent(
                         }
                 ) {
                     Icon(
-                        painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_paid),
+                        imageVector = Icons.Rounded.Payments,
                         contentDescription = null,
                         tint = BiteyMint,
                         modifier = Modifier.size(15.dp)
@@ -401,7 +401,7 @@ fun JournalDetailContent(
                             },
                             modifier = Modifier.size(20.dp)
                         ) {
-                            Icon(painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_check), contentDescription = "Done", tint = BiteyMint, modifier = Modifier.size(16.dp))
+                            Icon(imageVector = Icons.Rounded.Check, contentDescription = "Done", tint = BiteyMint, modifier = Modifier.size(16.dp))
                         }
                     } else {
                         val displayPrice = priceString.toDoubleOrNull()
@@ -416,7 +416,7 @@ fun JournalDetailContent(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
-                            painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_edit),
+                            imageVector = Icons.Rounded.Edit,
                             contentDescription = "Edit Price",
                             tint = theme.inkMuted.copy(alpha = 0.4f),
                             modifier = Modifier.size(11.dp)
@@ -435,7 +435,7 @@ fun JournalDetailContent(
                         }
                 ) {
                     Icon(
-                        painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_place),
+                        imageVector = Icons.Rounded.Place,
                         contentDescription = null,
                         tint = BiteyOrange,
                         modifier = Modifier.size(15.dp)
@@ -468,7 +468,7 @@ fun JournalDetailContent(
                             },
                             modifier = Modifier.size(20.dp)
                         ) {
-                            Icon(painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_check), contentDescription = "Done", tint = BiteyOrange, modifier = Modifier.size(16.dp))
+                            Icon(imageVector = Icons.Rounded.Check, contentDescription = "Done", tint = BiteyOrange, modifier = Modifier.size(16.dp))
                         }
                     } else {
                         Text(
@@ -483,7 +483,7 @@ fun JournalDetailContent(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
-                            painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_edit),
+                            imageVector = Icons.Rounded.Edit,
                             contentDescription = "Edit Place Name",
                             tint = theme.inkMuted.copy(alpha = 0.4f),
                             modifier = Modifier.size(11.dp)
@@ -573,7 +573,7 @@ fun JournalDetailContent(
                 modifier = Modifier.padding(bottom = 6.dp)
             ) {
                 Icon(
-                    painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_notes),
+                    imageVector = Icons.AutoMirrored.Rounded.Notes,
                     contentDescription = null,
                     tint = BiteyOrange,
                     modifier = Modifier.size(14.dp)
@@ -639,7 +639,7 @@ fun JournalDetailContent(
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         Icon(
-                            painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_close),
+                            imageVector = Icons.Rounded.Close,
                             contentDescription = "Remove",
                             tint = BiteyOrange.copy(alpha = 0.6f),
                             modifier = Modifier.size(11.dp)
@@ -655,7 +655,7 @@ fun JournalDetailContent(
                         .padding(vertical = 2.dp)
                 ) {
                     Icon(
-                        painter = if (editingTags) androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_expand_less) else androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_add),
+                        imageVector = if (editingTags) Icons.Rounded.ExpandLess else Icons.Rounded.Add,
                         contentDescription = null,
                         tint = theme.inkSecondary,
                         modifier = Modifier.size(12.dp)
@@ -698,7 +698,7 @@ fun JournalDetailContent(
                                 .padding(vertical = 2.dp)
                         ) {
                             Icon(
-                                painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_add),
+                                imageVector = Icons.Rounded.Add,
                                 contentDescription = null,
                                 tint = theme.inkMuted,
                                 modifier = Modifier.size(11.dp)
@@ -721,7 +721,7 @@ fun JournalDetailContent(
                             .padding(vertical = 2.dp)
                     ) {
                         Icon(
-                            painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_add),
+                            imageVector = Icons.Rounded.Add,
                             contentDescription = null,
                             tint = BiteyOrange,
                             modifier = Modifier.size(11.dp)

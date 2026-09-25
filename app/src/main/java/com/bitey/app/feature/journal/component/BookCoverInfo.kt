@@ -81,7 +81,7 @@ fun BookCoverHeader(
                 contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                    Icon(painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_screen_rotation), contentDescription = if (isGravityEnabled) "Gravity mode" else "Free mode", tint = badgeTint, modifier = Modifier.size(11.dp))
+                    Icon(imageVector = Icons.Rounded.ScreenRotation, contentDescription = if (isGravityEnabled) "Gravity mode" else "Free mode", tint = badgeTint, modifier = Modifier.size(11.dp))
                     Spacer(modifier = Modifier.width(3.dp))
                     Text(text = if (isGravityEnabled) "GRAV" else "FREE", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp), fontSize = 8.5.sp, color = badgeTint)
                 }
@@ -229,7 +229,7 @@ fun BookCoverPlateHeader(
                 contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                    Icon(painter = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_screen_rotation), contentDescription = if (isGravityEnabled) "Gravity mode" else "Free mode", tint = badgeTint, modifier = Modifier.size(11.dp))
+                    Icon(imageVector = Icons.Rounded.ScreenRotation, contentDescription = if (isGravityEnabled) "Gravity mode" else "Free mode", tint = badgeTint, modifier = Modifier.size(11.dp))
                     Spacer(modifier = Modifier.width(3.dp))
                     Text(text = if (isGravityEnabled) "GRAV" else "FREE", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp), fontSize = 8.5.sp, color = badgeTint)
                 }

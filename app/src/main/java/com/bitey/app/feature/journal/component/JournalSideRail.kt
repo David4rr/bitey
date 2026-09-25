@@ -49,7 +49,7 @@ fun JournalSideRail(
     ) {
         VerticalActionText(
             text = if (isGridView) "GRID" else "LIST",
-            icon = if (isGridView) androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_grid_view) else androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_view_list),
+            icon = if (isGridView) Icons.Rounded.GridView else Icons.AutoMirrored.Rounded.ViewList,
             onClick = onToggleGridView,
             isSelected = true
         )
@@ -63,19 +63,19 @@ fun JournalSideRail(
 
         VerticalActionText(
             text = "FOOTPRINT",
-            icon = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_place),
+            icon = Icons.Rounded.Place,
             onClick = onNavigateToFootprints
         )
 
         VerticalActionText(
             text = "FATES TABLE",
-            icon = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_auto_awesome),
+            icon = Icons.Rounded.AutoAwesome,
             onClick = onNavigateToFateTable
         )
 
         VerticalActionText(
             text = "SCRAPBOOK",
-            icon = androidx.compose.ui.res.painterResource(com.bitey.app.R.drawable.ic_doodle_collections),
+            icon = Icons.Rounded.Collections,
             onClick = onNavigateToScrapbook
         )
     }
@@ -84,7 +84,7 @@ fun JournalSideRail(
 @Composable
 fun VerticalActionText(
     text: String,
-    icon: androidx.compose.ui.graphics.painter.Painter,
+    icon: ImageVector,
     onClick: () -> Unit,
     isSelected: Boolean = false,
     modifier: Modifier = Modifier
@@ -98,10 +98,10 @@ fun VerticalActionText(
             .padding(vertical = 4.dp, horizontal = 2.dp)
     ) {
         Icon(
-            painter = icon,
+            imageVector = icon,
             contentDescription = text,
             tint = if (isSelected) BiteyOrange else BiteyOrange.copy(alpha = 0.85f),
-            modifier = Modifier.size(14.dp)
+            modifier = Modifier.size(15.dp)
         )
         Spacer(modifier = Modifier.height(6.dp))
         Layout(

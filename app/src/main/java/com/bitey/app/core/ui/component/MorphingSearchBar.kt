@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -144,7 +145,7 @@ fun MorphingSearchBar(
         ) {
             // Collapsed Icon: Crossfades out in Draw phase
             Icon(
-                painter = painterResource(R.drawable.ic_doodle_search),
+                imageVector = Icons.Rounded.Search,
                 contentDescription = "Search",
                 tint = if (searchQuery.isNotEmpty()) BiteyOrange else theme.inkPrimary,
                 modifier = Modifier.size(22.dp).graphicsLayer {
@@ -161,7 +162,7 @@ fun MorphingSearchBar(
                 },
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                    Icon(painterResource(R.drawable.ic_doodle_search), contentDescription = null, tint = BiteyOrange, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.Search, contentDescription = null, tint = BiteyOrange, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     BasicTextField(
                         value = searchQuery,
