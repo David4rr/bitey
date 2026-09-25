@@ -1,6 +1,7 @@
 package com.bitey.app.core.image
 
 import android.graphics.Bitmap
+import android.graphics.RectF
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.segmentation.subject.SubjectSegmentation
 import com.google.mlkit.vision.segmentation.subject.SubjectSegmenter
@@ -11,8 +12,14 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class RecognizedSubject(
+    val id: Int,
+    val bounds: RectF,
+    val bitmap: Bitmap
+)
+
 sealed interface SegmentationResult {
-    data class Success(val foregroundBitmap: Bitmap, val subjectBitmaps: List<Bitmap> = emptyList()) : SegmentationResult
+    data class Success(val foregroundBitmap: Bitmap, val subjects: List<RecognizedSubject> = emptyList()) : SegmentationResult
     data object NoSubjectFound : SegmentationResult
     data class Failure(val error: Throwable) : SegmentationResult
 }
@@ -44,9 +51,11 @@ class FoodSubjectSegmenter @Inject constructor() {
             val inputImage = InputImage.fromBitmap(inputBitmap, 0)
             val result = segmenter.process(inputImage).await()
             val rawForeground = result.foregroundBitmap?.let { ensureSoftwareBitmap(it) }
-
             if (rawForeground != null && hasVisibleContent(rawForeground)) {
-                SegmentationResult.Success(rawForeground)
+                val list = listOf(
+                    RecognizedSubject(id = 0, bounds = RectF(0.05f, 0.05f, 0.95f, 0.95f), bitmap = rawForeground)
+                )
+                SegmentationResult.Success(rawForeground, list)
             } else {
                 SegmentationResult.NoSubjectFound
             }

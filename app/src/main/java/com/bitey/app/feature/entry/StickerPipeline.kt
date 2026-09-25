@@ -38,22 +38,12 @@ class StickerPipeline @Inject constructor(
                     } catch (e: Exception) {
                         android.util.Log.e("StickerPipeline", "createDieCutSticker failed, trying circular fallback", e)
                         val circular = fallbackStickerCropper.createCircularSubject(bitmap)
-                        try {
-                            stickerCompositor.createDieCutSticker(circular)
-                        } finally {
-                            circular.recycle()
-                        }
-                    } finally {
-                        segResult.foregroundBitmap.recycle()
-                    }
+                        try { stickerCompositor.createDieCutSticker(circular) } finally { circular.recycle() }
+                    } finally { segResult.foregroundBitmap.recycle() }
                 }
                 else -> {
                     val circular = fallbackStickerCropper.createCircularSubject(bitmap)
-                    try {
-                        stickerCompositor.createDieCutSticker(circular)
-                    } finally {
-                        circular.recycle()
-                    }
+                    try { stickerCompositor.createDieCutSticker(circular) } finally { circular.recycle() }
                 }
             }
         } catch (e: Exception) {
@@ -80,37 +70,51 @@ class StickerPipeline @Inject constructor(
         } finally { bitmap.recycle() }
     }
 
-    suspend fun createSmartOutlinedSticker(file: File, normPoints: List<Pair<Float, Float>>): CompositedSticker? = withContext(Dispatchers.IO) {
-        val bitmap = decodeSampledBitmap(file) ?: return@withContext null
+    suspend fun detectSubjectBoxes(file: File): List<com.bitey.app.feature.camera.RecognizedSubjectBox> = withContext(Dispatchers.IO) {
+        val bitmap = decodeSampledBitmap(file) ?: return@withContext emptyList()
         try {
-            if (normPoints.size < 3) return@withContext createStickerWithFallback(file)
-            val pts = normPoints.map { android.graphics.PointF(it.first * bitmap.width, it.second * bitmap.height) }
-            val minX = pts.minOf { it.x }.toInt().coerceAtLeast(0)
-            val maxX = pts.maxOf { it.x }.toInt().coerceAtMost(bitmap.width)
-            val minY = pts.minOf { it.y }.toInt().coerceAtLeast(0)
-            val maxY = pts.maxOf { it.y }.toInt().coerceAtMost(bitmap.height)
-            val cropW = (maxX - minX).coerceAtLeast(1)
-            val cropH = (maxY - minY).coerceAtLeast(1)
-            val masked = Bitmap.createBitmap(cropW, cropH, Bitmap.Config.ARGB_8888)
-            val canvas = android.graphics.Canvas(masked)
-            val path = android.graphics.Path().apply {
-                moveTo(pts[0].x - minX, pts[0].y - minY)
-                for (i in 1 until pts.size) lineTo(pts[i].x - minX, pts[i].y - minY)
-                close()
+            when (val seg = foodSubjectSegmenter.segment(bitmap)) {
+                is SegmentationResult.Success -> seg.subjects.map {
+                    com.bitey.app.feature.camera.RecognizedSubjectBox(it.id, it.bounds.left, it.bounds.top, it.bounds.right, it.bounds.bottom)
+                }
+                else -> emptyList()
             }
-            canvas.clipPath(path)
-            canvas.drawBitmap(bitmap, android.graphics.Rect(minX, minY, maxX, maxY), android.graphics.Rect(0, 0, cropW, cropH), null)
-            val subject = when (val seg = foodSubjectSegmenter.segment(masked)) {
-                is SegmentationResult.Success -> seg.foregroundBitmap
-                else -> masked
-            }
-            try { stickerCompositor.createDieCutSticker(subject) } finally {
-                if (subject != masked) subject.recycle()
-                masked.recycle()
-            }
-        } catch (_: Exception) { null } finally { bitmap.recycle() }
+        } catch (_: Exception) { emptyList() } finally { bitmap.recycle() }
     }
 
+    suspend fun createIntelligentMaskedSticker(
+        file: File, subjectId: Int?, customBounds: android.graphics.RectF?
+    ): CompositedSticker? = withContext(Dispatchers.IO) {
+        val bitmap = decodeSampledBitmap(file) ?: return@withContext null
+        try {
+            if (subjectId != null) {
+                val seg = foodSubjectSegmenter.segment(bitmap)
+                if (seg is SegmentationResult.Success) {
+                    val sub = seg.subjects.firstOrNull { it.id == subjectId }?.bitmap ?: seg.foregroundBitmap
+                    return@withContext try { stickerCompositor.createDieCutSticker(sub) } finally {
+                        if (sub != seg.foregroundBitmap) sub.recycle()
+                        seg.foregroundBitmap.recycle()
+                    }
+                }
+            }
+            if (customBounds != null) {
+                val left = (customBounds.left * bitmap.width).toInt().coerceIn(0, bitmap.width)
+                val top = (customBounds.top * bitmap.height).toInt().coerceIn(0, bitmap.height)
+                val w = ((customBounds.right - customBounds.left) * bitmap.width).toInt().coerceIn(1, bitmap.width - left)
+                val h = ((customBounds.bottom - customBounds.top) * bitmap.height).toInt().coerceIn(1, bitmap.height - top)
+                val cropped = Bitmap.createBitmap(bitmap, left, top, w, h)
+                val subject = when (val seg = foodSubjectSegmenter.segment(cropped)) {
+                    is SegmentationResult.Success -> seg.foregroundBitmap
+                    else -> cropped
+                }
+                return@withContext try { stickerCompositor.createDieCutSticker(subject) } finally {
+                    if (subject != cropped) subject.recycle()
+                    cropped.recycle()
+                }
+            }
+            createStickerWithFallback(file)
+        } catch (_: Exception) { null } finally { bitmap.recycle() }
+    }
     private fun decodeSampledBitmap(file: File, maxDim: Int = 1024): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.absolutePath, bounds)

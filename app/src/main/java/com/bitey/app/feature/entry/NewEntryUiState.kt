@@ -20,6 +20,7 @@ data class NewEntryUiState(
     val mealType: com.bitey.app.core.database.model.MealType = com.bitey.app.core.database.model.MealType.FOOD,
     val isStickerMode: Boolean = true,
     val showManualCutDialog: Boolean = false,
+    val detectedSubjects: List<com.bitey.app.feature.camera.RecognizedSubjectBox> = emptyList(),
     val selectedImage: ProcessedImage? = null,
     val isLoading: Boolean = false,
     val isCameraActive: Boolean = false,

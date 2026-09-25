@@ -37,13 +37,6 @@ class StickerCompositor @Inject constructor(
         }
     }
 
-    /**
-     * Composites a realistic die-cut sticker:
-     * 1. Dilated solid white outline (8-12px) behind foreground subject.
-     * 2. Soft 4-8px drop shadow behind the white outline.
-     * 3. Foreground subject drawn cleanly on top.
-     * 4. Exports to transparent WebP in internal storage.
-     */
     suspend fun createDieCutSticker(
         foregroundBitmap: Bitmap,
         strokeWidthPx: Float = 12f,
@@ -64,14 +57,11 @@ class StickerCompositor @Inject constructor(
         val outWidth = croppedForeground.width + (margin * 2)
         val outHeight = croppedForeground.height + (margin * 2)
 
-        // 1. Target transparent sticker canvas
         val stickerBitmap = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(stickerBitmap)
 
-        // 2. Extract alpha channel from foreground for morphological dilation
-        val alphaMask = croppedForeground.extractAlpha()
+        val alphaMask = createSolidAlphaMask(croppedForeground)
 
-        // 3. Create intermediate dilated white outline bitmap
         val outlineBitmap = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
         val outlineCanvas = Canvas(outlineBitmap)
 
@@ -80,22 +70,17 @@ class StickerCompositor @Inject constructor(
             colorFilter = PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
         }
 
-        // Circular multi-pass dilation: stamp alpha mask in radial pattern
         val numAngles = 24
         val maxRadius = strokeWidthPx.toInt().coerceAtLeast(2)
         for (radius in 2..maxRadius step 2) {
             val r = radius.toFloat()
             for (i in 0 until numAngles) {
                 val theta = (i * 2.0 * Math.PI / numAngles)
-                val ox = (cos(theta) * r).toFloat()
-                val oy = (sin(theta) * r).toFloat()
-                outlineCanvas.drawBitmap(alphaMask, margin + ox, margin + oy, whitePaint)
+                outlineCanvas.drawBitmap(alphaMask, margin + (cos(theta) * r).toFloat(), margin + (sin(theta) * r).toFloat(), whitePaint)
             }
         }
-        // Center stamp
         outlineCanvas.drawBitmap(alphaMask, margin.toFloat(), margin.toFloat(), whitePaint)
 
-        // 4. Draw soft drop shadow behind the white outline
         val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             isFilterBitmap = true
             colorFilter = PorterDuffColorFilter(0x33000000, PorterDuff.Mode.SRC_IN)
@@ -103,26 +88,16 @@ class StickerCompositor @Inject constructor(
         }
         canvas.drawBitmap(outlineBitmap, 0f, shadowOffsetYPx, shadowPaint)
 
-        // 5. Draw solid white die-cut outline over shadow
-        val defaultPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            isFilterBitmap = true
-        }
+        val defaultPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { isFilterBitmap = true }
         canvas.drawBitmap(outlineBitmap, 0f, 0f, defaultPaint)
 
-        // 6. Draw foreground food subject over white outline
         canvas.drawBitmap(croppedForeground, margin.toFloat(), margin.toFloat(), defaultPaint)
 
-        // Clean up temporary bitmaps
         alphaMask.recycle()
         outlineBitmap.recycle()
-        if (shouldRecycleCropped) {
-            croppedForeground.recycle()
-        }
-        if (shouldRecycleSafe) {
-            safeForeground.recycle()
-        }
+        if (shouldRecycleCropped) croppedForeground.recycle()
+        if (shouldRecycleSafe) safeForeground.recycle()
 
-        // 7. Save to internal WebP file
         val stickerFile = File(stickersDir, "sticker_${UUID.randomUUID()}.webp")
         FileOutputStream(stickerFile).use { out ->
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
@@ -134,13 +109,67 @@ class StickerCompositor @Inject constructor(
         }
 
         val result = CompositedSticker(
-            file = stickerFile,
-            width = outWidth,
-            height = outHeight,
-            sizeBytes = stickerFile.length()
+            file = stickerFile, width = outWidth, height = outHeight, sizeBytes = stickerFile.length()
         )
-
         stickerBitmap.recycle()
         result
+    }
+
+    private fun createSolidAlphaMask(cropped: Bitmap): Bitmap {
+        val w = cropped.width; val h = cropped.height
+        val pixels = IntArray(w * h)
+        cropped.getPixels(pixels, 0, w, 0, 0, w, h)
+        val solid = BooleanArray(w * h)
+        for (i in pixels.indices) solid[i] = ((pixels[i] ushr 24) and 0xFF) > 25
+
+        val maxGap = 32
+        for (x in 0 until w) {
+            var lastY = -1
+            for (y in 0 until h) {
+                val idx = y * w + x
+                if (solid[idx]) {
+                    if (lastY != -1 && (y - lastY) <= maxGap) for (fill in (lastY + 1) until y) solid[fill * w + x] = true
+                    lastY = y
+                }
+            }
+        }
+        for (y in 0 until h) {
+            var lastX = -1; val row = y * w
+            for (x in 0 until w) {
+                val idx = row + x
+                if (solid[idx]) {
+                    if (lastX != -1 && (x - lastX) <= maxGap) for (fill in (lastX + 1) until x) solid[row + fill] = true
+                    lastX = x
+                }
+            }
+        }
+
+        val pw = w + 2; val ph = h + 2
+        val visited = ByteArray(pw * ph)
+        for (y in 0 until h) {
+            val srcRow = y * w; val dstRow = (y + 1) * pw + 1
+            for (x in 0 until w) if (solid[srcRow + x]) visited[dstRow + x] = 1
+        }
+        val queue = IntArray(pw * ph)
+        var head = 0; var tail = 0
+        queue[tail++] = 0; visited[0] = 2
+        while (head < tail) {
+            val idx = queue[head++]; val x = idx % pw; val y = idx / pw
+            if (x > 0 && visited[idx - 1].toInt() == 0) { visited[idx - 1] = 2; queue[tail++] = idx - 1 }
+            if (x < pw - 1 && visited[idx + 1].toInt() == 0) { visited[idx + 1] = 2; queue[tail++] = idx + 1 }
+            if (y > 0 && visited[idx - pw].toInt() == 0) { visited[idx - pw] = 2; queue[tail++] = idx - pw }
+            if (y < ph - 1 && visited[idx + pw].toInt() == 0) { visited[idx + pw] = 2; queue[tail++] = idx + pw }
+        }
+
+        val solidPixels = IntArray(w * h)
+        for (y in 0 until h) {
+            val srcRow = (y + 1) * pw + 1; val dstRow = y * w
+            for (x in 0 until w) if (visited[srcRow + x].toInt() != 2) solidPixels[dstRow + x] = -0x1000000
+        }
+        val solidBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        solidBmp.setPixels(solidPixels, 0, w, 0, 0, w, h)
+        val alpha = solidBmp.extractAlpha()
+        solidBmp.recycle()
+        return alpha
     }
 }

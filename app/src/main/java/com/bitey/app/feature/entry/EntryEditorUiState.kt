@@ -8,7 +8,7 @@ data class EntryEditorUiState(
     val imagePath: String = "",
     val stickerPath: String? = null,
     val isStickerMode: Boolean = true,
-    val dishTitle: String = "Food",
+    val dishTitle: String = "",
     val notes: String = "",
     val mealType: MealType = MealType.FOOD,
     val rating: Float = 0.0f,

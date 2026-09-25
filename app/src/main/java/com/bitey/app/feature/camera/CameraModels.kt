@@ -40,6 +40,15 @@ data class CandidateStickerItem(
     val mealType: MealType = MealType.FOOD
 )
 
+data class RecognizedSubjectBox(
+    val id: Int,
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float,
+    val label: String = "Dish ${id + 1}"
+)
+
 fun normalizeAndCropCapturedImage(sourceFile: File, ratio: CameraRatio, maxDim: Int = 1920): File {
     return try {
         val exif = ExifInterface(sourceFile.absolutePath)

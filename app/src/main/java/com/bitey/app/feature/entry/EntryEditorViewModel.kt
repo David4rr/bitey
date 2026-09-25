@@ -61,7 +61,7 @@ class EntryEditorViewModel @Inject constructor(
                 isStickerMode = decodedStickerPath != null,
                 timestamp = passedTimestamp,
                 mealType = inferredMealType,
-                dishTitle = inferredMealType.label,
+                dishTitle = "",
                 latitude = passedLat,
                 longitude = passedLng
             )
@@ -81,16 +81,7 @@ class EntryEditorViewModel @Inject constructor(
 
     fun updateDishTitle(title: String) { _uiState.update { it.copy(dishTitle = title, errorMessage = null) } }
     fun updateNotes(notes: String) { _uiState.update { it.copy(notes = notes) } }
-    fun updateMealType(mealType: MealType) {
-        _uiState.update { current ->
-            val updatedTitle = if (current.dishTitle.isBlank() || MealType.entries.any { it.label == current.dishTitle }) {
-                mealType.label
-            } else {
-                current.dishTitle
-            }
-            current.copy(mealType = mealType, dishTitle = updatedTitle)
-        }
-    }
+    fun updateMealType(mealType: MealType) { _uiState.update { it.copy(mealType = mealType) } }
     fun updateRating(rating: Float) { _uiState.update { it.copy(rating = rating.coerceIn(0.0f, 5.0f)) } }
     fun updateCurrency(currency: String) { _uiState.update { it.copy(currency = currency) } }
     fun toggleFavorite() { _uiState.update { it.copy(isFavorite = !it.isFavorite) } }

@@ -13,7 +13,7 @@ class EntryEditorUiStateTest {
     @Test
     fun defaultState_hasExpectedDefaults() {
         val state = EntryEditorUiState()
-        assertEquals("Food", state.dishTitle)
+        assertEquals("", state.dishTitle)
         assertEquals("", state.notes)
         assertEquals(MealType.FOOD, state.mealType)
         assertEquals(0.0f, state.rating, 0.01f)

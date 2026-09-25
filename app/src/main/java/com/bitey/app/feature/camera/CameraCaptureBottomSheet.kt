@@ -180,8 +180,9 @@ fun CameraCaptureBottomSheet(
                     val original = uiState.candidates.firstOrNull()?.originalFilePath ?: uiState.processingSourceFile ?: ""
                     ManualCutDialog(
                         imageFilePath = original,
+                        detectedSubjects = uiState.detectedSubjects,
                         onDismiss = { viewModel.dismissManualCutDialog() },
-                        onApplyCut = { normPoints -> viewModel.applySmartOutlineCut(normPoints) }
+                        onApplyMask = { subjectId, customBounds -> viewModel.applyIntelligentMask(subjectId, customBounds) }
                     )
                 }
             }

@@ -38,8 +38,17 @@ class NewEntryViewModel @Inject constructor(
     init { viewModelScope.launch { fetchLocation() } }
 
     fun setPhotoMode(mode: PhotoMode) { _uiState.update { it.copy(photoMode = mode) } }
-    fun updateDishName(name: String) { _uiState.update { it.copy(dishName = name) } }
-    fun openManualCutDialog() { _uiState.update { it.copy(showManualCutDialog = true) } }
+    fun updateDishName(name: String) {
+        _uiState.update { c -> c.copy(dishName = name, candidates = if (c.candidates.size <= 1) c.candidates.map { it.copy(label = name) } else c.candidates) }
+    }
+    fun openManualCutDialog() {
+        val target = _uiState.value.candidates.firstOrNull { it.isSelected } ?: _uiState.value.candidates.firstOrNull()
+        val path = target?.originalFilePath ?: _uiState.value.processingSourceFile
+        _uiState.update { it.copy(showManualCutDialog = true, detectedSubjects = emptyList()) }
+        if (path != null) viewModelScope.launch {
+            _uiState.update { it.copy(detectedSubjects = stickerPipeline.detectSubjectBoxes(File(path))) }
+        }
+    }
     fun dismissManualCutDialog() { _uiState.update { it.copy(showManualCutDialog = false) } }
     fun openCamera() { _uiState.update { it.copy(isCameraActive = true) } }
     fun closeCamera() { _uiState.update { it.copy(isCameraActive = false) } }
@@ -53,25 +62,13 @@ class NewEntryViewModel @Inject constructor(
     fun resetState() { _uiState.update { NewEntryUiState() } }
 
     fun updateMealType(mealType: MealType) {
-        _uiState.update { c ->
-            val newName = if (c.dishName.isBlank() || MealType.entries.any { it.label == c.dishName }) mealType.label else c.dishName
-            c.copy(mealType = mealType, dishName = newName)
-        }
+        _uiState.update { c -> c.copy(mealType = mealType, candidates = if (c.candidates.size <= 1) c.candidates.map { it.copy(mealType = mealType) } else c.candidates) }
     }
-
     fun updateCandidateLabel(id: String, name: String) {
-        _uiState.update { c -> c.copy(candidates = c.candidates.map { if (it.id == id) it.copy(label = name) else it }) }
+        _uiState.update { c -> c.copy(dishName = if (c.candidates.size <= 1) name else c.dishName, candidates = c.candidates.map { if (it.id == id) it.copy(label = name) else it }) }
     }
-
     fun updateCandidateMealType(id: String, mealType: MealType) {
-        _uiState.update { c ->
-            c.copy(candidates = c.candidates.map {
-                if (it.id == id) {
-                    val newLabel = if (it.label.isBlank() || it.label == "Food" || it.label.startsWith("Dish", ignoreCase = true) || MealType.entries.any { m -> m.label == it.label }) mealType.label else it.label
-                    it.copy(mealType = mealType, label = newLabel)
-                } else it
-            })
-        }
+        _uiState.update { c -> c.copy(candidates = c.candidates.map { if (it.id == id) it.copy(mealType = mealType) else it }) }
     }
 
     fun onPhotoCaptured(file: File) {
@@ -139,10 +136,10 @@ class NewEntryViewModel @Inject constructor(
         }
     }
 
-    fun applySmartOutlineCut(normPoints: List<Pair<Float, Float>>) {
+    fun applyIntelligentMask(subjectId: Int?, customBounds: android.graphics.RectF?) {
         val target = _uiState.value.candidates.firstOrNull { it.isSelected } ?: _uiState.value.candidates.firstOrNull() ?: return
         viewModelScope.launch {
-            val sticker = stickerPipeline.createSmartOutlinedSticker(File(target.originalFilePath), normPoints) ?: return@launch
+            val sticker = stickerPipeline.createIntelligentMaskedSticker(File(target.originalFilePath), subjectId, customBounds) ?: return@launch
             val updated = target.copy(stickerFilePath = sticker.file.absolutePath)
             _uiState.update { c -> c.copy(candidates = c.candidates.map { if (it.id == target.id) updated else it }, showManualCutDialog = false) }
         }
@@ -152,19 +149,21 @@ class NewEntryViewModel @Inject constructor(
         val state = _uiState.value
         val toSave = state.candidates.filter { it.isSelected }
         if (toSave.isEmpty()) { resetState(); onSuccess(); return }
+        val isMulti = state.candidates.size > 1
+        if (isMulti && toSave.any { it.label.trim().isBlank() }) return
+        if (!isMulti && state.dishName.trim().isBlank() && toSave.none { it.label.trim().isNotBlank() }) return
         viewModelScope.launch(Dispatchers.IO) {
             val isSticker = state.isStickerMode
             val storageDir = File(context.filesDir, if (isSticker) "bites/stickers" else "bites/media")
             val currentTime = System.currentTimeMillis()
             val coords = if (state.latitude == null || state.longitude == null) locationProvider.getCurrentLocation(2000L) else null
-            val lat = state.latitude ?: coords?.latitude
-            val lng = state.longitude ?: coords?.longitude
+            val lat = state.latitude ?: coords?.latitude; val lng = state.longitude ?: coords?.longitude
             val locName = state.locationName?.trim()?.takeIf { it.isNotBlank() }
             val sessionId = java.util.UUID.randomUUID().toString()
 
             toSave.forEachIndexed { idx, item ->
                 val sourcePath = if (isSticker) item.stickerFilePath else item.originalFilePath
-                val dishTitle = item.label.ifBlank { item.mealType.label }
+                val dishTitle = if (isMulti) item.label.trim().ifBlank { item.mealType.label } else state.dishName.trim().ifBlank { item.label.trim() }.ifBlank { item.mealType.label }
                 val savedFile = ImageStorageNaming.saveAsNamedImage(File(sourcePath), storageDir, dishTitle)
                 plateEntryDao.insertEntryWithTags(
                     entry = PlateEntryEntity(

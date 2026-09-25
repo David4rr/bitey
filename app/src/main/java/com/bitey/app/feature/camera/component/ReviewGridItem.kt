@@ -41,8 +41,8 @@ internal fun ReviewGridItem(
             .clip(RoundedCornerShape(16.dp))
             .background(theme.surface)
             .border(
-                width = if (item.isSelected) 1.5.dp else 1.dp,
-                color = if (item.isSelected) BiteyOrange else theme.border.copy(alpha = 0.35f),
+                width = 1.dp,
+                color = if (item.isSelected) BiteyOrange.copy(alpha = 0.35f) else theme.border.copy(alpha = 0.15f),
                 shape = RoundedCornerShape(16.dp)
             )
             .clickable(onClick = onToggle)
@@ -63,8 +63,8 @@ internal fun ReviewGridItem(
                 .align(Alignment.TopEnd)
                 .size(24.dp)
                 .clip(CircleShape)
-                .background(if (item.isSelected) BiteyOrange else theme.surfaceVariant)
-                .border(1.dp, if (item.isSelected) BiteyOrange else theme.border, CircleShape),
+                .background(if (item.isSelected) BiteyOrange else theme.surface.copy(alpha = 0.8f))
+                .border(1.dp, if (item.isSelected) BiteyOrange.copy(alpha = 0.5f) else theme.border.copy(alpha = 0.2f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             if (item.isSelected) {
