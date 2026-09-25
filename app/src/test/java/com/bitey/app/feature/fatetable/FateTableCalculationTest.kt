@@ -187,14 +187,14 @@ class FateTableCalculationTest {
     }
 
     @Test
-    fun fateTableMenuSelection_userCanFreelyChooseMenuContract() {
+    fun fateTableMenuSelection_userOnlyAddsDishesAlreadyOnMenuContract() {
         val vmFile = File("src/main/java/com/bitey/app/feature/fatetable/FateTableViewModel.kt").takeIf { it.exists() }
             ?: File("app/src/main/java/com/bitey/app/feature/fatetable/FateTableViewModel.kt")
         assertTrue("FateTableViewModel exists", vmFile.exists())
         val vmText = vmFile.readText()
 
         assertTrue("ViewModel supports addCandidate", vmText.contains("fun addCandidate"))
-        assertTrue("ViewModel supports addCustomMenu", vmText.contains("fun addCustomMenu"))
+        assertFalse("ViewModel does not allow arbitrary custom dish creation", vmText.contains("fun addCustomMenu"))
         assertTrue("ViewModel supports removeCandidate", vmText.contains("fun removeCandidate"))
         assertTrue("ViewModel supports toggleCandidate", vmText.contains("fun toggleCandidate"))
         assertTrue("ViewModel supports resetToAutoCandidates", vmText.contains("fun resetToAutoCandidates"))
@@ -204,8 +204,9 @@ class FateTableCalculationTest {
         assertTrue("FateTableMenuPickerSheet exists", pickerFile.exists())
         val pickerText = pickerFile.readText()
 
-        assertTrue("Allows adding custom dish by name", pickerText.contains("onAddCustomMenu"))
-        assertTrue("Allows picking from journal entries", pickerText.contains("onToggleEntry"))
+        assertFalse("Picker does not allow arbitrary custom dish creation", pickerText.contains("onAddCustomMenu"))
+        assertTrue("Allows picking from dishes on the menu", pickerText.contains("onToggleEntry"))
+        assertTrue("Provides search filter for menu dishes", pickerText.contains("searchQuery"))
         assertTrue("Allows reset to auto recommendation", pickerText.contains("onResetToAuto"))
 
         val chipsFile = File("src/main/java/com/bitey/app/feature/fatetable/component/ActiveMenuChipsRow.kt").takeIf { it.exists() }

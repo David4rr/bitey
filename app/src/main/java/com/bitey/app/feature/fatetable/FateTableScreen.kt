@@ -176,7 +176,6 @@ fun FateTableScreen(
             allEntries = uiState.allEntries,
             selectedCandidates = uiState.candidates,
             onToggleEntry = { viewModel.toggleCandidate(it) },
-            onAddCustomMenu = { viewModel.addCustomMenu(it) },
             onResetToAuto = { viewModel.resetToAutoCandidates() },
             onDismiss = { viewModel.openMenuPicker(false) }
         )

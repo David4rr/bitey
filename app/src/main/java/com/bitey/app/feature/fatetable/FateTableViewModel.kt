@@ -4,8 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bitey.app.core.database.dao.PlateEntryDao
 import com.bitey.app.core.database.dao.TagDao
-import com.bitey.app.core.database.model.MealType
-import com.bitey.app.core.database.model.PlateEntryEntity
 import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.database.model.TagEntity
 import com.bitey.app.feature.fatetable.component.FateTableUtils
@@ -14,7 +12,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 import kotlin.random.Random
-
 private const val MAX_WHEEL_CANDIDATES = 8
 
 @HiltViewModel
@@ -125,21 +122,6 @@ class FateTableViewModel @Inject constructor(
         _manualCandidates.value = current + entry
     }
 
-    fun addCustomMenu(title: String) {
-        val clean = title.trim()
-        if (_isSpinning.value || clean.isBlank()) return
-        val current = _manualCandidates.value ?: uiState.value.candidates
-        if (current.size >= 12) return
-        val custom = PlateEntryWithTags(
-            entry = PlateEntryEntity(
-                id = -System.currentTimeMillis() - Random.nextInt(1000),
-                title = clean, fullImagePath = "", thumbnailPath = "",
-                isStickerMode = false, mealType = MealType.FOOD
-            ),
-            tags = emptyList()
-        )
-        _manualCandidates.value = current + custom
-    }
     fun removeCandidate(entryId: Long) {
         if (_isSpinning.value) return
         val current = _manualCandidates.value ?: uiState.value.candidates
