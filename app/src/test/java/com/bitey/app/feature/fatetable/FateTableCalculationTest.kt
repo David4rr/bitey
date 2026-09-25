@@ -158,6 +158,11 @@ class FateTableCalculationTest {
         val sheetFile = File("src/main/java/com/bitey/app/feature/fatetable/component/WinningDishBottomSheet.kt").takeIf { it.exists() }
             ?: File("app/src/main/java/com/bitey/app/feature/fatetable/component/WinningDishBottomSheet.kt")
         assertTrue("WinningDishBottomSheet exists", sheetFile.exists())
+        val sheetText = sheetFile.readText()
+        assertTrue("WinningDishBottomSheet matches dish details", sheetText.contains("JournalDetailSheet"))
+        assertTrue("WinningDishBottomSheet disables scrolling up to delete", sheetText.contains("enableDelete = false"))
+        assertTrue("WinningDishBottomSheet has Shuffle Again button", sheetText.contains("Shuffle Again"))
+        assertTrue("WinningDishBottomSheet has Navigate button", sheetText.contains("Navigate"))
     }
 
     @Test
@@ -211,9 +216,11 @@ class FateTableCalculationTest {
 
         val chipsFile = File("src/main/java/com/bitey/app/feature/fatetable/component/ActiveMenuChipsRow.kt").takeIf { it.exists() }
             ?: File("app/src/main/java/com/bitey/app/feature/fatetable/component/ActiveMenuChipsRow.kt")
-        assertTrue("ActiveMenuChipsRow exists", chipsFile.exists())
-        val chipsText = chipsFile.readText()
-        assertTrue("Row allows removing candidates", chipsText.contains("onRemoveCandidate"))
-        assertTrue("Row allows opening menu picker", chipsText.contains("onAddMenuClick"))
+        assertFalse("ActiveMenuChipsRow is removed", chipsFile.exists())
+
+        val screenFile = File("src/main/java/com/bitey/app/feature/fatetable/FateTableScreen.kt").takeIf { it.exists() }
+            ?: File("app/src/main/java/com/bitey/app/feature/fatetable/FateTableScreen.kt")
+        val screenText = screenFile.readText()
+        assertFalse("FateTableScreen has no filter chip row", screenText.contains("ActiveMenuChipsRow"))
     }
 }

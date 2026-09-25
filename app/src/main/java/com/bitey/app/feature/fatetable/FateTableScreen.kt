@@ -77,18 +77,7 @@ fun FateTableScreen(
             onNavigateBack = onNavigateBack
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (uiState.candidates.isNotEmpty()) {
-            ActiveMenuChipsRow(
-                candidates = uiState.candidates,
-                isSpinning = uiState.isSpinning,
-                onRemoveCandidate = { viewModel.removeCandidate(it) },
-                onAddMenuClick = { viewModel.openMenuPicker(true) },
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         if (uiState.candidates.size < 2) {
             InsufficientCandidatesPrompt(
                 totalEntriesCount = uiState.totalEntriesCount,
@@ -161,13 +150,22 @@ fun FateTableScreen(
     }
 
     if (uiState.showWinningDialog && uiState.winningEntry != null) {
-        val winningId = uiState.winningEntry!!.entry.id
+        val winningDish = uiState.winningEntry!!
+        val winningId = winningDish.entry.id
         WinningDishBottomSheet(
-            entryWithTags = uiState.winningEntry!!,
+            entryWithTags = winningDish,
+            availableTags = uiState.availableTags,
             onDismiss = { viewModel.dismissWinningDialog() },
+            onShuffleAgain = {
+                viewModel.dismissWinningDialog()
+                viewModel.shuffleCandidates()
+            },
             onNavigate = {
+                viewModel.dismissWinningDialog()
                 onNavigateToFootprints(winningId)
-            }
+            },
+            onToggleFavorite = { viewModel.toggleFavorite(winningDish.entry) },
+            onSaveEntry = { updated, tags -> viewModel.updateEntry(updated, tags) }
         )
     }
 

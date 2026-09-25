@@ -86,27 +86,18 @@ fun FateTableHeader(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
                     modifier = Modifier
-                        .height(38.dp)
+                        .size(38.dp)
                         .clip(RoundedCornerShape(19.dp))
                         .background(if (isCustomSelection) BiteyOrange else BiteyOrange.copy(alpha = 0.12f))
-                        .clickable(enabled = !isSpinning, onClick = onOpenMenuPicker)
-                        .padding(horizontal = 12.dp),
+                        .clickable(enabled = !isSpinning, onClick = onOpenMenuPicker),
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Rounded.Add,
-                            contentDescription = "Choose Menu",
-                            tint = if (isCustomSelection) StickerDieCutWhite else BiteyOrange,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (isCustomSelection) "Custom" else "Menu",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = if (isCustomSelection) StickerDieCutWhite else BiteyOrange
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Rounded.Add,
+                        contentDescription = "Choose Menu",
+                        tint = if (isCustomSelection) StickerDieCutWhite else BiteyOrange,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
                 if (candidateCount >= 2) {
                     Box(

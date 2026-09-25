@@ -4,12 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bitey.app.core.database.dao.PlateEntryDao
 import com.bitey.app.core.database.dao.TagDao
+import com.bitey.app.core.database.model.PlateEntryEntity
 import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.database.model.TagEntity
 import com.bitey.app.feature.fatetable.component.FateTableUtils
 import com.bitey.app.feature.fatetable.component.SpinResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.random.Random
 private const val MAX_WHEEL_CANDIDATES = 8
@@ -161,5 +164,18 @@ class FateTableViewModel @Inject constructor(
 
     fun dismissWinningDialog() {
         _showWinningDialog.value = false
+    }
+
+    fun toggleFavorite(entry: PlateEntryEntity) {
+        val newFav = !entry.isFavorite
+        viewModelScope.launch(Dispatchers.IO) {
+            plateEntryDao.updateFavoriteStatus(entry.id, newFav)
+        }
+    }
+
+    fun updateEntry(entry: PlateEntryEntity, tags: List<TagEntity>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            plateEntryDao.updateEntryWithTags(entry, tags, tagDao)
+        }
     }
 }

@@ -40,9 +40,11 @@ fun JournalDetailSheet(
     plate: com.bitey.app.feature.journal.JournalPlate? = null,
     onClose: () -> Unit,
     onToggleFavorite: () -> Unit,
-    onDelete: () -> Unit,
+    onDelete: (() -> Unit)? = null,
     availableTags: List<TagEntity> = emptyList(),
-    onSaveEntry: ((PlateEntryEntity, List<TagEntity>) -> Unit)? = null
+    onSaveEntry: ((PlateEntryEntity, List<TagEntity>) -> Unit)? = null,
+    enableDelete: Boolean = true,
+    bottomAction: (@Composable () -> Unit)? = null
 ) {
     var activeDish by remember(item.entry.id, plate?.id) { mutableStateOf(item) }
     val entry = activeDish.entry
@@ -118,7 +120,7 @@ fun JournalDetailSheet(
             .fillMaxWidth()
             .background(theme.surface)
             .padding(horizontal = 20.dp, vertical = 12.dp)
-            .nestedScroll(nestedScrollConnection)
+            .then(if (enableDelete && onDelete != null) Modifier.nestedScroll(nestedScrollConnection) else Modifier)
     ) {
         Box(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp), contentAlignment = Alignment.Center) {
             Box(modifier = Modifier.size(width = 40.dp, height = 4.dp).clip(CircleShape).background(theme.inkMuted.copy(alpha = 0.35f)))
@@ -144,15 +146,19 @@ fun JournalDetailSheet(
             }
         }
 
-        ScrollUpToDeleteZone(
-            isArmed = isArmed,
-            onDragDelta = { handleDragDelta(it) },
-            onDragEnd = { handleRelease() },
-            onDragCancel = { handleRelease() },
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp)
-        )
+        if (bottomAction != null) {
+            bottomAction()
+        } else if (enableDelete && onDelete != null) {
+            ScrollUpToDeleteZone(
+                isArmed = isArmed,
+                onDragDelta = { handleDragDelta(it) },
+                onDragEnd = { handleRelease() },
+                onDragCancel = { handleRelease() },
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp)
+            )
+        }
     }
-    if (showDeleteConfirm) {
+    if (showDeleteConfirm && enableDelete && onDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             title = { Text(text = "Delete Entry?", color = theme.inkPrimary, fontWeight = FontWeight.Bold) },
