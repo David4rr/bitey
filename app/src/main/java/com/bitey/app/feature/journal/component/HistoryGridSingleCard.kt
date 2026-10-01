@@ -75,7 +75,7 @@ fun HistoryGridPlateCard(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .padding(start = 10.dp, end = 12.dp, top = 14.dp, bottom = 16.dp),
+                    .padding(start = 8.dp, end = 10.dp, top = 12.dp, bottom = 14.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 BookCoverPlateHeader(

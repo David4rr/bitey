@@ -44,11 +44,11 @@ fun GravitySticker(
             val listener = object : SensorEventListener {
                 override fun onSensorChanged(e: SensorEvent?) {
                     val vals = e?.values ?: return
-                    val targetX = (-vals[0] / 9.8f).coerceIn(-1f, 1f)
-                    val targetY = (vals[1] / 9.8f).coerceIn(-1f, 1f)
-                    val newX = tiltX + (targetX - tiltX) * 0.2f
-                    val newY = tiltY + (targetY - tiltY) * 0.2f
-                    if (abs(newX - tiltX) > 0.012f || abs(newY - tiltY) > 0.012f) {
+                    val targetX = (vals[0] / 6.5f).coerceIn(-1f, 1f)
+                    val targetY = ((vals[1] - 5.5f) / 4.0f).coerceIn(-1f, 1f)
+                    val newX = tiltX + (targetX - tiltX) * 0.35f
+                    val newY = tiltY + (targetY - tiltY) * 0.35f
+                    if (abs(newX - tiltX) > 0.005f || abs(newY - tiltY) > 0.005f) {
                         tiltX = newX
                         tiltY = newY
                     }
@@ -96,10 +96,10 @@ fun GravitySticker(
         val count = imageFiles.size
         val containerWidthDp = with(density) { containerSize.width.toDp() }
         val stickerSizeDp = when (count) {
-            1 -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.82f).coerceIn(190.dp, 250.dp) else 220.dp
-            2 -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.58f).coerceIn(150.dp, 180.dp) else 165.dp
-            3 -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.48f).coerceIn(125.dp, 155.dp) else 140.dp
-            else -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.40f).coerceIn(105.dp, 135.dp) else 120.dp
+            1 -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.70f).coerceIn(170.dp, 220.dp) else 200.dp
+            2 -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.52f).coerceIn(135.dp, 165.dp) else 150.dp
+            3 -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.44f).coerceIn(115.dp, 140.dp) else 130.dp
+            else -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.38f).coerceIn(95.dp, 120.dp) else 110.dp
         }
         imageFiles.forEachIndexed { index, file ->
             val initialOffset = when (count) {

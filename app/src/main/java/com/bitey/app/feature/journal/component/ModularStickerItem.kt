@@ -49,10 +49,10 @@ internal fun ModularStickerItem(
     val context = LocalContext.current
     val density = LocalDensity.current
     val stickerPx = with(density) { stickerSizeDp.toPx() }
-    val maxDragX = (containerSize.width / 2f - stickerPx * 0.25f).coerceAtLeast(36f * density.density)
-    val maxDragY = (containerSize.height / 2f - stickerPx * 0.25f).coerceAtLeast(36f * density.density)
-    val maxTiltX = ((containerSize.width - stickerPx) / 2f).coerceAtLeast(20f * density.density)
-    val maxTiltY = ((containerSize.height - stickerPx) / 2f).coerceAtLeast(20f * density.density)
+    val maxDragX = (containerSize.width / 2f - stickerPx * 0.15f).coerceAtLeast(48f * density.density)
+    val maxDragY = (containerSize.height / 2f - stickerPx * 0.15f).coerceAtLeast(48f * density.density)
+    val maxTiltX = (containerSize.width / 2f - stickerPx * 0.32f).coerceAtLeast(36f * density.density)
+    val maxTiltY = (containerSize.height / 2f - stickerPx * 0.32f).coerceAtLeast(36f * density.density)
 
     val cachedPos = remember(file.absolutePath) { StickerPositionCache.getPosition(file.absolutePath, initialOffset) }
     var isDragging by remember { mutableStateOf(false) }
@@ -69,7 +69,7 @@ internal fun ModularStickerItem(
     val physicsX = if (isAnimating) {
         val animX by animateFloatAsState(
             targetValue = if (isDragging) dragX else targetPhysicsX,
-            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow), label = "px"
+            animationSpec = spring(dampingRatio = 0.72f, stiffness = 750f), label = "px"
         )
         animX
     } else userOffsetX
@@ -77,7 +77,7 @@ internal fun ModularStickerItem(
     val physicsY = if (isAnimating) {
         val animY by animateFloatAsState(
             targetValue = if (isDragging) dragY else targetPhysicsY,
-            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow), label = "py"
+            animationSpec = spring(dampingRatio = 0.72f, stiffness = 750f), label = "py"
         )
         animY
     } else userOffsetY
@@ -89,8 +89,8 @@ internal fun ModularStickerItem(
 
     val rotation = if (isGravityEnabled) {
         val rot by animateFloatAsState(
-            targetValue = (tiltX * 22f + (index * 6f - 3f)).coerceIn(-30f, 30f),
-            animationSpec = spring(stiffness = Spring.StiffnessMediumLow), label = "rot"
+            targetValue = (tiltX * 16f + (index * 6f - 3f)).coerceIn(-24f, 24f),
+            animationSpec = spring(dampingRatio = 0.72f, stiffness = 750f), label = "rot"
         )
         rot
     } else 0f
