@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.bitey.app.core.ui.neumorphic.dieCutStickerEffect
+import com.bitey.app.core.image.CropTransparentTransformation
 import java.io.File
 
 @Composable
@@ -48,8 +49,10 @@ internal fun ModularStickerItem(
     val context = LocalContext.current
     val density = LocalDensity.current
     val stickerPx = with(density) { stickerSizeDp.toPx() }
-    val maxDragX = ((containerSize.width - stickerPx) / 2f).coerceAtLeast(10f)
-    val maxDragY = ((containerSize.height - stickerPx) / 2f).coerceAtLeast(10f)
+    val maxDragX = (containerSize.width / 2f - stickerPx * 0.25f).coerceAtLeast(36f * density.density)
+    val maxDragY = (containerSize.height / 2f - stickerPx * 0.25f).coerceAtLeast(36f * density.density)
+    val maxTiltX = ((containerSize.width - stickerPx) / 2f).coerceAtLeast(20f * density.density)
+    val maxTiltY = ((containerSize.height - stickerPx) / 2f).coerceAtLeast(20f * density.density)
 
     val cachedPos = remember(file.absolutePath) { StickerPositionCache.getPosition(file.absolutePath, initialOffset) }
     var isDragging by remember { mutableStateOf(false) }
@@ -59,8 +62,8 @@ internal fun ModularStickerItem(
     var userOffsetY by remember(file.absolutePath) { mutableFloatStateOf(cachedPos.second) }
 
     val scatterSpread = if (totalCount > 1) (index - (totalCount - 1) / 2f) * 22f * density.density else 0f
-    val targetPhysicsX = if (isGravityEnabled) (tiltX * maxDragX + scatterSpread).coerceIn(-maxDragX, maxDragX) else userOffsetX
-    val targetPhysicsY = if (isGravityEnabled) (tiltY * maxDragY).coerceIn(-maxDragY, maxDragY) else userOffsetY
+    val targetPhysicsX = if (isGravityEnabled) (tiltX * maxTiltX + scatterSpread).coerceIn(-maxDragX, maxDragX) else userOffsetX
+    val targetPhysicsY = if (isGravityEnabled) (tiltY * maxTiltY).coerceIn(-maxDragY, maxDragY) else userOffsetY
 
     val isAnimating = isDragging || isGravityEnabled
     val physicsX = if (isAnimating) {
@@ -92,8 +95,10 @@ internal fun ModularStickerItem(
         rot
     } else 0f
 
-    val imageRequest = remember(file) {
-        ImageRequest.Builder(context).data(file).size(500, 500).crossfade(false).build()
+    val imageRequest = remember(file, isStickerMode) {
+        ImageRequest.Builder(context).data(file)
+            .apply { if (isStickerMode) transformations(CropTransparentTransformation()) }
+            .size(500, 500).crossfade(false).build()
     }
 
     Box(

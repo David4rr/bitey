@@ -75,7 +75,7 @@ fun HistoryGridPlateCard(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .padding(start = 12.dp, end = 14.dp, top = 16.dp, bottom = 18.dp),
+                    .padding(start = 10.dp, end = 12.dp, top = 14.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 BookCoverPlateHeader(
@@ -94,7 +94,7 @@ fun HistoryGridPlateCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .padding(vertical = 6.dp)
+                        .padding(vertical = 4.dp)
                         .clip(innerCanvasShape)
                         .background(radialBrush)
                         .border(width = 1.dp, color = theme.border.copy(alpha = 0.4f), shape = innerCanvasShape),

@@ -96,10 +96,10 @@ fun GravitySticker(
         val count = imageFiles.size
         val containerWidthDp = with(density) { containerSize.width.toDp() }
         val stickerSizeDp = when (count) {
-            1 -> if (containerWidthDp > 0.dp) (containerWidthDp - 12.dp).coerceIn(240.dp, 290.dp) else 255.dp
-            2 -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.62f).coerceIn(160.dp, 190.dp) else 170.dp
-            3 -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.52f).coerceIn(135.dp, 165.dp) else 145.dp
-            else -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.44f).coerceIn(115.dp, 145.dp) else 125.dp
+            1 -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.82f).coerceIn(190.dp, 250.dp) else 220.dp
+            2 -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.58f).coerceIn(150.dp, 180.dp) else 165.dp
+            3 -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.48f).coerceIn(125.dp, 155.dp) else 140.dp
+            else -> if (containerWidthDp > 0.dp) (containerWidthDp * 0.40f).coerceIn(105.dp, 135.dp) else 120.dp
         }
         imageFiles.forEachIndexed { index, file ->
             val initialOffset = when (count) {
