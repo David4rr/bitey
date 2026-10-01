@@ -65,19 +65,27 @@ internal fun ModularStickerItem(
     val targetPhysicsX = if (isGravityEnabled) (tiltX * maxTiltX + scatterSpread).coerceIn(-maxDragX, maxDragX) else userOffsetX
     val targetPhysicsY = if (isGravityEnabled) (tiltY * maxTiltY).coerceIn(-maxDragY, maxDragY) else userOffsetY
 
-    val isAnimating = isDragging || isGravityEnabled
     val animX by animateFloatAsState(
         targetValue = if (isDragging) dragX else targetPhysicsX,
         animationSpec = spring(dampingRatio = 0.46f, stiffness = 500f), label = "px"
     )
-    val physicsX = if (isDragging) dragX else if (isAnimating) animX else userOffsetX
+    val physicsX = if (isDragging) dragX else animX
 
     val animY by animateFloatAsState(
         targetValue = if (isDragging) dragY else targetPhysicsY,
         animationSpec = spring(dampingRatio = 0.46f, stiffness = 500f), label = "py"
     )
-    val physicsY = if (isDragging) dragY else if (isAnimating) animY else userOffsetY
+    val physicsY = if (isDragging) dragY else animY
 
+    val currentX by rememberUpdatedState(physicsX)
+    val currentY by rememberUpdatedState(physicsY)
+
+    SideEffect {
+        if (isGravityEnabled && !isDragging) {
+            userOffsetX = physicsX
+            userOffsetY = physicsY
+        }
+    }
     val dragScale by animateFloatAsState(
         targetValue = if (isDragging) 1.15f else 1.0f,
         animationSpec = spring(dampingRatio = 0.48f, stiffness = 550f), label = "ds"
@@ -114,8 +122,8 @@ internal fun ModularStickerItem(
                     }
                     if (drag != null) {
                         isDragging = true
-                        dragX = (physicsX + overSlop.x).coerceIn(-maxDragX, maxDragX)
-                        dragY = (physicsY + overSlop.y).coerceIn(-maxDragY, maxDragY)
+                        dragX = (currentX + overSlop.x).coerceIn(-maxDragX, maxDragX)
+                        dragY = (currentY + overSlop.y).coerceIn(-maxDragY, maxDragY)
                         userOffsetX = dragX
                         userOffsetY = dragY
                         while (true) {
