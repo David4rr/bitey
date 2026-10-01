@@ -16,7 +16,9 @@ data class NavigationRoute(
     val points: List<LocationCoordinates>,
     val distanceMeters: Double,
     val durationSeconds: Double,
-    val steps: List<RouteStep>
+    val steps: List<RouteStep>,
+    val mode: TravelMode = TravelMode.MOTORCYCLE,
+    val isOfflineFallback: Boolean = false
 ) {
     val formattedDistance: String
         get() = if (distanceMeters >= 1000) {

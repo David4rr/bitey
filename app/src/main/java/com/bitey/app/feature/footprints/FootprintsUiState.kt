@@ -3,6 +3,7 @@ package com.bitey.app.feature.footprints
 import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.location.model.NavigationRoute
 import com.bitey.app.core.location.model.RouteStep
+import com.bitey.app.core.location.model.TravelMode
 
 data class FootprintSpot(
     val id: String,
@@ -28,6 +29,7 @@ data class FootprintsUiState(
     val navigationTarget: PlateEntryWithTags? = null,
     val activeRoute: NavigationRoute? = null,
     val currentStepIndex: Int = 0,
+    val travelMode: TravelMode = TravelMode.MOTORCYCLE,
     val isNavigating: Boolean = false
 ) {
     val currentManeuverStep: RouteStep?

@@ -149,7 +149,10 @@ fun FootprintsScreen(
         Column(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp)) {
             if (uiState.isNavigating && uiState.navigationTarget != null && uiState.activeRoute != null) {
                 NavigationBottomPanel(
-                    targetEntry = uiState.navigationTarget!!, route = uiState.activeRoute!!,
+                    targetEntry = uiState.navigationTarget!!,
+                    route = uiState.activeRoute!!,
+                    currentMode = uiState.travelMode,
+                    onSelectMode = { viewModel.setTravelMode(it) },
                     onStopNavigation = { viewModel.stopNavigation() },
                     onRecenterRoute = { NavigationRouteOverlay.renderRoute(mapView, uiState.activeRoute, autoZoom = true) }
                 )

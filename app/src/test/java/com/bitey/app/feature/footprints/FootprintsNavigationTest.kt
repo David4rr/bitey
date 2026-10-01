@@ -7,6 +7,7 @@ import com.bitey.app.core.location.LocationCoordinates
 import com.bitey.app.core.location.RouteRepository
 import com.bitey.app.core.location.model.NavigationRoute
 import com.bitey.app.core.location.model.RouteStep
+import com.bitey.app.core.location.model.TravelMode
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
@@ -64,6 +65,36 @@ class FootprintsNavigationTest {
         assertTrue(route.steps.isNotEmpty())
     }
 
+    @Test
+    fun routeRepository_supportsAllTravelModes() = runBlocking {
+        val repo = RouteRepository()
+        val start = LocationCoordinates(-6.2088, 106.8456)
+        val dest = LocationCoordinates(-6.2297, 106.8295)
+
+        for (mode in TravelMode.values()) {
+            val route = repo.getRoute(start, dest, mode)
+            assertNotNull(route)
+            assertEquals(mode, route.mode)
+            assertTrue(route.points.size >= 2)
+            assertTrue(route.distanceMeters > 0.0)
+            assertTrue(route.durationSeconds > 0.0)
+        }
+    }
+
+    @Test
+    fun travelMode_walkingHasLongerDurationThanMotorcycle() = runBlocking {
+        val repo = RouteRepository()
+        val start = LocationCoordinates(-6.2088, 106.8456)
+        val dest = LocationCoordinates(-6.2297, 106.8295)
+
+        val motoRoute = repo.getRoute(start, dest, TravelMode.MOTORCYCLE)
+        val walkRoute = repo.getRoute(start, dest, TravelMode.WALKING)
+
+        assertTrue(
+            "Walking duration should be significantly longer than motorcycle",
+            walkRoute.durationSeconds > motoRoute.durationSeconds
+        )
+    }
     @Test
     fun footprintsUiState_computesCurrentManeuverStep() {
         val step1 = RouteStep("Turn left onto Jl. Sudirman", "turn", "left", 200.0, 30.0)

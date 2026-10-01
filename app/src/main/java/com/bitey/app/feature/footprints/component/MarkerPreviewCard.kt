@@ -175,8 +175,8 @@ fun MarkerPreviewCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Navigate with Google Maps",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    text = "Navigate",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                     color = StickerDieCutWhite
                 )
             }

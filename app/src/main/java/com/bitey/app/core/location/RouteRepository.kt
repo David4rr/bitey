@@ -2,6 +2,7 @@ package com.bitey.app.core.location
 
 import com.bitey.app.core.location.model.NavigationRoute
 import com.bitey.app.core.location.model.RouteStep
+import com.bitey.app.core.location.model.TravelMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -17,20 +18,50 @@ class RouteRepository @Inject constructor() {
 
     suspend fun getRoute(
         start: LocationCoordinates,
-        destination: LocationCoordinates
+        destination: LocationCoordinates,
+        mode: TravelMode = TravelMode.MOTORCYCLE
     ): NavigationRoute = withContext(Dispatchers.IO) {
-        val fetched = fetchOsrmRoute(start, destination)
-        fetched ?: createFallbackRoute(start, destination)
+        val fetched = fetchOsmRoute(start, destination, mode)
+            ?: fetchOsrmRoute(start, destination, mode)
+        fetched ?: createFallbackRoute(start, destination, mode)
     }
 
-    private fun fetchOsrmRoute(
+    private fun fetchOsmRoute(
         start: LocationCoordinates,
-        destination: LocationCoordinates
+        destination: LocationCoordinates,
+        mode: TravelMode
     ): NavigationRoute? {
         return try {
             val urlString = String.format(
                 Locale.US,
-                "https://router.project-osrm.org/route/v1/driving/%.6f,%.6f;%.6f,%.6f?overview=full&geometries=geojson&steps=true",
+                "https://routing.openstreetmap.de/%s/route/v1/driving/%.6f,%.6f;%.6f,%.6f?overview=full&geometries=geojson&steps=true",
+                mode.openStreetMapProfile,
+                start.longitude, start.latitude, destination.longitude, destination.latitude
+            )
+            val connection = (URL(urlString).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 5000
+                readTimeout = 5000
+                setRequestProperty("User-Agent", "BiteyApp/1.0 (Android)")
+            }
+            if (connection.responseCode != 200) return null
+            val body = connection.inputStream.bufferedReader().use { it.readText() }
+            parseOsrmJson(body, mode)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun fetchOsrmRoute(
+        start: LocationCoordinates,
+        destination: LocationCoordinates,
+        mode: TravelMode
+    ): NavigationRoute? {
+        return try {
+            val urlString = String.format(
+                Locale.US,
+                "https://router.project-osrm.org/route/v1/%s/%.6f,%.6f;%.6f,%.6f?overview=full&geometries=geojson&steps=true",
+                mode.osrmProfile,
                 start.longitude, start.latitude, destination.longitude, destination.latitude
             )
             val connection = (URL(urlString).openConnection() as HttpURLConnection).apply {
@@ -41,13 +72,13 @@ class RouteRepository @Inject constructor() {
             }
             if (connection.responseCode != 200) return null
             val body = connection.inputStream.bufferedReader().use { it.readText() }
-            parseOsrmJson(body)
+            parseOsrmJson(body, mode)
         } catch (_: Exception) {
             null
         }
     }
 
-    private fun parseOsrmJson(jsonString: String): NavigationRoute? {
+    private fun parseOsrmJson(jsonString: String, mode: TravelMode = TravelMode.MOTORCYCLE): NavigationRoute? {
         val root = JSONObject(jsonString)
         if (root.optString("code") != "Ok") return null
         val routes = root.optJSONArray("routes") ?: return null
@@ -108,7 +139,9 @@ class RouteRepository @Inject constructor() {
                 points = points,
                 distanceMeters = totalDistance,
                 durationSeconds = totalDuration,
-                steps = steps
+                steps = steps,
+                mode = mode,
+                isOfflineFallback = false
             )
         } else null
     }
@@ -137,10 +170,17 @@ class RouteRepository @Inject constructor() {
 
     private fun createFallbackRoute(
         start: LocationCoordinates,
-        dest: LocationCoordinates
+        dest: LocationCoordinates,
+        mode: TravelMode = TravelMode.MOTORCYCLE
     ): NavigationRoute {
-        val directDistance = haversineMeters(start, dest) * 1.3
-        val duration = directDistance / 8.33 // ~30 km/h average speed in city
+        val multiplier = when (mode) {
+            TravelMode.CAR -> 1.3
+            TravelMode.MOTORCYCLE -> 1.2
+            TravelMode.WALKING -> 1.15
+        }
+        val directDistance = haversineMeters(start, dest) * multiplier
+        val speedMps = (mode.defaultSpeedKmh * 1000.0) / 3600.0
+        val duration = directDistance / maxOf(1.0, speedMps)
         val steps = listOf(
             RouteStep(
                 instruction = "Head toward destination",
@@ -163,10 +203,11 @@ class RouteRepository @Inject constructor() {
             points = listOf(start, dest),
             distanceMeters = directDistance,
             durationSeconds = duration,
-            steps = steps
+            steps = steps,
+            mode = mode,
+            isOfflineFallback = true
         )
     }
-
     private fun haversineMeters(p1: LocationCoordinates, p2: LocationCoordinates): Double {
         val r = 6371000.0
         val dLat = Math.toRadians(p2.latitude - p1.latitude)

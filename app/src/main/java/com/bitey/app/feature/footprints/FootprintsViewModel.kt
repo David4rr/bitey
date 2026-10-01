@@ -7,6 +7,7 @@ import com.bitey.app.core.database.model.PlateEntryEntity
 import com.bitey.app.core.database.model.PlateEntryWithTags
 import com.bitey.app.core.location.*
 import com.bitey.app.core.location.model.NavigationRoute
+import com.bitey.app.core.location.model.TravelMode
 import com.bitey.app.feature.footprints.component.LocationFallbackResolver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -32,14 +33,15 @@ class FootprintsViewModel @Inject constructor(
     private val _activeRoute = MutableStateFlow<NavigationRoute?>(null)
     private val _currentStepIndex = MutableStateFlow(0)
     private val _favOverrides = MutableStateFlow<Map<Long, Boolean>>(emptyMap())
-
+    private val _travelMode = MutableStateFlow(TravelMode.MOTORCYCLE)
     val deviceLocation: StateFlow<LocationCoordinates?> = _deviceLocation
 
     val uiState: StateFlow<FootprintsUiState> = combine(
         listOf(
             plateEntryDao.getAllEntriesWithTags(),
             _selectedSpotId, _selectedEntryId, _searchQuery,
-            _isFavoritesOnly, _navigationTarget, _activeRoute, _favOverrides
+            _isFavoritesOnly, _navigationTarget, _activeRoute, _favOverrides,
+            _travelMode
         )
     ) { args ->
         @Suppress("UNCHECKED_CAST") val allEntries = args[0] as List<PlateEntryWithTags>
@@ -50,6 +52,7 @@ class FootprintsViewModel @Inject constructor(
         val navTarget = args[5] as? PlateEntryWithTags
         val route = args[6] as? NavigationRoute
         @Suppress("UNCHECKED_CAST") val favMap = args[7] as Map<Long, Boolean>
+        val mode = args[8] as TravelMode
 
         val locationEntries = allEntries.map { item ->
             val fav = favMap[item.entry.id] ?: item.entry.isFavorite
@@ -79,7 +82,8 @@ class FootprintsViewModel @Inject constructor(
             selectedEntry = selectedEntry, searchQuery = query, isFavoritesOnly = favOnly,
             allVisitedCount = locationEntries.size, favoriteSpotsCount = locationEntries.count { it.entry.isFavorite },
             isLoading = false, navigationTarget = navTarget, activeRoute = route,
-            currentStepIndex = _currentStepIndex.value, isNavigating = navTarget != null && route != null
+            currentStepIndex = _currentStepIndex.value, travelMode = mode,
+            isNavigating = navTarget != null && route != null
         )
     }
     .flowOn(Dispatchers.Default)
@@ -133,16 +137,24 @@ class FootprintsViewModel @Inject constructor(
         _selectedEntryId.value = null
     }
 
-    fun startNavigation(entry: PlateEntryWithTags) {
+    fun startNavigation(entry: PlateEntryWithTags, mode: TravelMode = _travelMode.value) {
         val lat = entry.entry.latitude ?: return
         val lng = entry.entry.longitude ?: return
         viewModelScope.launch {
             val start = _deviceLocation.value ?: locationProvider.getCurrentLocation(4000L) ?: LocationCoordinates(-6.2088, 106.8456)
             clearSelection()
             _navigationTarget.value = entry
-            _activeRoute.value = routeRepository.getRoute(start, LocationCoordinates(lat, lng))
+            _travelMode.value = mode
+            _activeRoute.value = routeRepository.getRoute(start, LocationCoordinates(lat, lng), mode)
             _currentStepIndex.value = 0
         }
+    }
+
+    fun setTravelMode(mode: TravelMode) {
+        if (_travelMode.value == mode && _activeRoute.value?.mode == mode) return
+        _travelMode.value = mode
+        val target = _navigationTarget.value ?: return
+        startNavigation(target, mode)
     }
 
     fun startNavigationForEntryId(id: Long) {
