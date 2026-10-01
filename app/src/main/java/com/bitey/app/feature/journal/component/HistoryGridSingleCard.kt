@@ -44,7 +44,7 @@ fun HistoryGridPlateCard(
     }
 
     var isGravityEnabled by remember(plate.id) {
-        mutableStateOf(StickerPositionCache.isGravityEnabled(plate.id, default = false))
+        mutableStateOf(StickerPositionCache.isGravityEnabled(plate.id, default = true))
     }
 
     Box(

@@ -66,31 +66,27 @@ internal fun ModularStickerItem(
     val targetPhysicsY = if (isGravityEnabled) (tiltY * maxTiltY).coerceIn(-maxDragY, maxDragY) else userOffsetY
 
     val isAnimating = isDragging || isGravityEnabled
-    val physicsX = if (isAnimating) {
-        val animX by animateFloatAsState(
-            targetValue = if (isDragging) dragX else targetPhysicsX,
-            animationSpec = spring(dampingRatio = 0.72f, stiffness = 750f), label = "px"
-        )
-        animX
-    } else userOffsetX
+    val animX by animateFloatAsState(
+        targetValue = if (isDragging) dragX else targetPhysicsX,
+        animationSpec = spring(dampingRatio = 0.46f, stiffness = 500f), label = "px"
+    )
+    val physicsX = if (isDragging) dragX else if (isAnimating) animX else userOffsetX
 
-    val physicsY = if (isAnimating) {
-        val animY by animateFloatAsState(
-            targetValue = if (isDragging) dragY else targetPhysicsY,
-            animationSpec = spring(dampingRatio = 0.72f, stiffness = 750f), label = "py"
-        )
-        animY
-    } else userOffsetY
+    val animY by animateFloatAsState(
+        targetValue = if (isDragging) dragY else targetPhysicsY,
+        animationSpec = spring(dampingRatio = 0.46f, stiffness = 500f), label = "py"
+    )
+    val physicsY = if (isDragging) dragY else if (isAnimating) animY else userOffsetY
 
-    val dragScale = if (isDragging) {
-        val scale by animateFloatAsState(1.08f, spring(stiffness = Spring.StiffnessMediumLow), label = "ds")
-        scale
-    } else 1.0f
+    val dragScale by animateFloatAsState(
+        targetValue = if (isDragging) 1.15f else 1.0f,
+        animationSpec = spring(dampingRatio = 0.48f, stiffness = 550f), label = "ds"
+    )
 
     val rotation = if (isGravityEnabled) {
         val rot by animateFloatAsState(
-            targetValue = (tiltX * 16f + (index * 6f - 3f)).coerceIn(-24f, 24f),
-            animationSpec = spring(dampingRatio = 0.72f, stiffness = 750f), label = "rot"
+            targetValue = if (isDragging) 0f else (tiltX * 18f + (index * 6f - 3f)).coerceIn(-24f, 24f),
+            animationSpec = spring(dampingRatio = 0.50f, stiffness = 500f), label = "rot"
         )
         rot
     } else 0f

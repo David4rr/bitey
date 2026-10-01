@@ -44,7 +44,7 @@ fun GravitySticker(
             val listener = object : SensorEventListener {
                 override fun onSensorChanged(e: SensorEvent?) {
                     val vals = e?.values ?: return
-                    val targetX = (vals[0] / 6.5f).coerceIn(-1f, 1f)
+                    val targetX = (-vals[0] / 6.5f).coerceIn(-1f, 1f)
                     val targetY = ((vals[1] - 5.5f) / 4.0f).coerceIn(-1f, 1f)
                     val newX = tiltX + (targetX - tiltX) * 0.35f
                     val newY = tiltY + (targetY - tiltY) * 0.35f
